@@ -60,32 +60,32 @@ flowchart TB
         ArXiv["arXiv Atom API & PDF Server"]
     end
 
-    U -->|HTTPS| UI --> GuardIn
-    GuardIn <-->|24h Query Cache| DDB
+    U -->|"HTTPS"| UI --> GuardIn
+    GuardIn <-->|"24h Query Cache"| DDB
     GuardIn --> Planner
-    Planner <-->|GBNF JSON Plan| LLM
-    LLM -.->|Fallback on Error| HFFallback
+    Planner <-->|"GBNF JSON Plan"| LLM
+    LLM -.->|"Fallback on Error"| HFFallback
     Planner --> Executor
 
-    Executor -->|SigV4 Signed POST| LambdaTool --> ArXiv
-    LambdaTool -->|1 Gzip Bundle/Paper| S3
-    Executor -->|Embed & Hybrid RRF| Embed --> FAISS
-    FAISS <-->|Cold-Start Hydration| S3
-    Executor -->|User Memory & Topics| DDB
+    Executor -->|"SigV4 Signed POST"| LambdaTool --> ArXiv
+    LambdaTool -->|"1 Gzip Bundle per Paper"| S3
+    Executor -->|"Embed & Hybrid RRF"| Embed --> FAISS
+    FAISS <-->|"Cold-Start Hydration"| S3
+    Executor -->|"User Memory & Topics"| DDB
 
     Executor --> Gate
-    Gate -->|Score < 0.32: Abstain| UI
-    Gate -->|Score >= 0.32: Verified Chunks| Synth
-    Synth <-->|<untrusted_paper_content> XML| LLM
-    Synth -->|Verified [arxiv_id#cN] Response| UI
+    Gate -->|"Score below 0.32: Abstain"| UI
+    Gate -->|"Score >= 0.32: Verified Chunks"| Synth
+    Synth <-->|"Untrusted Paper XML Sandbox"| LLM
+    Synth -->|"Verified Citation Response (arxiv_id#cN)"| UI
 
-    EB -->|Weekly Trigger| LambdaDigest
-    LambdaDigest -->|Read Subscriptions| DDB
-    LambdaDigest -->|Query New Papers| ArXiv
-    LambdaDigest -->|Send HTML Digest| SES --> U
+    EB -->|"Weekly Trigger"| LambdaDigest
+    LambdaDigest -->|"Read Subscriptions"| DDB
+    LambdaDigest -->|"Query New Papers"| ArXiv
+    LambdaDigest -->|"Send HTML Digest"| SES --> U
 
-    HFSpace -->|JSON Logs & 6 Custom Metrics| CW
-    HFSpace -->|Load Config| SSM
+    HFSpace -->|"JSON Logs & 6 Custom Metrics"| CW
+    HFSpace -->|"Load Config"| SSM
 ```
 
 ---
