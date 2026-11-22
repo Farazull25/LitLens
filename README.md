@@ -3,9 +3,8 @@ title: LitLens Research Paper Copilot
 emoji: 🔬
 colorFrom: blue
 colorTo: indigo
-sdk: docker
+sdk: static
 app_port: 7860
-hardware: cpu-basic
 license: apache-2.0
 short_description: Citation-grounded arXiv Copilot on 100% free HF & AWS tiers
 ---
