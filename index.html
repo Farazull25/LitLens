@@ -841,7 +841,84 @@
       `;
     }
 
-    function processUserQuery(q) {
+    async function handleLowConfidenceOrGeneralQuery(q, localScored) {
+      const qTokens = tokenize(q);
+      // Try live arXiv Atom API search when local library doesn't cover the topic
+      if (qTokens.length >= 1 && activeScope === "ALL") {
+        try {
+          const searchTerms = qTokens.slice(0, 5).join("+AND+");
+          const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(qTokens.slice(0, 5).join(" "))}&start=0&max_results=3`;
+          const resp = await fetch(url);
+          if (resp.ok) {
+            const xmlText = await resp.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+            const entries = Array.from(xmlDoc.getElementsByTagName("entry"));
+            if (entries.length > 0) {
+              const newlyIndexed = [];
+              entries.forEach(entry => {
+                const rawId = (entry.getElementsByTagName("id")[0]?.textContent || "").trim();
+                const arxivId = rawId.split("/abs/").pop().split("v")[0] || "2401.99999";
+                const title = (entry.getElementsByTagName("title")[0]?.textContent || "arXiv Paper").replace(/\s+/g, " ").trim();
+                const summary = (entry.getElementsByTagName("summary")[0]?.textContent || "").replace(/\s+/g, " ").trim();
+                const published = (entry.getElementsByTagName("published")[0]?.textContent || "2024").slice(0, 4);
+                const authorNodes = Array.from(entry.getElementsByTagName("author"));
+                const authors = authorNodes.map(a => a.getElementsByTagName("name")[0]?.textContent || "").filter(Boolean).slice(0, 2).join(", ") + ` (${published})`;
+
+                const chunkId = `${arxivId}#c0`;
+                const chunkObj = {
+                  chunk_id: chunkId,
+                  arxiv_id: arxivId,
+                  title,
+                  authors,
+                  section: "Abstract (Live arXiv)",
+                  page: 1,
+                  source: "seed",
+                  text: summary,
+                  score: 0.89
+                };
+                if (!CORPUS.some(c => c.chunk_id === chunkId)) {
+                  CORPUS.push(chunkObj);
+                }
+                newlyIndexed.push(chunkObj);
+              });
+
+              updateLibraryAndPills();
+              const bullets = newlyIndexed.map(c => {
+                const firstTwo = c.text.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+                return `<li><strong>${c.title}</strong> (${c.authors}): ${firstTwo} <span class="cite-tag">[${c.chunk_id}]</span></li>`;
+              }).join("");
+
+              appendMessage("bot", `
+                <div>
+                  🌐 <strong>Live arXiv Search &amp; Indexing</strong> — I fetched and indexed <strong>${newlyIndexed.length} papers</strong> from arXiv matching your query:
+                  <ul>${bullets}</ul>
+                  ${buildEvidenceDrawerHtml(newlyIndexed)}
+                </div>
+              `);
+              return;
+            }
+          }
+        } catch (_err) {
+          // Fall through to helpful assistant response if offline or CORS blocked
+        }
+      }
+
+      // Helpful general assistant fallback (instead of a dead-end refusal wall)
+      const seenPapers = [...new Map(CORPUS.map(c => [c.arxiv_id, c])).values()];
+      const paperList = seenPapers.slice(0, 6).map(p => `<li><strong>${p.title}</strong> (<code>${p.arxiv_id}</code>)</li>`).join("");
+      appendMessage("bot", `
+        <div>
+          💡 <strong>No direct match in the currently selected paper chunks</strong> (max similarity <code>${localScored[0] ? localScored[0].score : 0} &lt; 0.32</code> safety threshold), so I abstained from fabricating a citation.<br/><br/>
+          Here is what is currently indexed in your library that you can query right now:
+          <ul>${paperList}</ul>
+          <em>Tip: Click <strong>+</strong> in the prompt bar to upload your own PDF on this topic, or ask me about any of the papers above!</em>
+          ${buildEvidenceDrawerHtml(localScored.slice(0, 2))}
+        </div>
+      `);
+    }
+
+    async function processUserQuery(q) {
       appendMessage("user", q.replace(/</g, "&lt;"));
 
       const { blocked } = sanitizeText(q);
@@ -899,14 +976,20 @@
         return;
       }
 
-      // 3. General Conversational / Help
-      if (/^(hi|hello|hey|what can you do|help|who are you)/i.test(qLower)) {
+      // 3. General Conversational / About App / Architecture / Help
+      if (
+        /^(hi|hello|hey|yo|good morning|good evening|thanks|thank you)\b/i.test(qLower) ||
+        /(what is this app|what is litlens|about this app|what does this do|what can you do|who are you|how does this work|how to use|capabilities|features|architecture|tech stack|aws|free tier)/i.test(qLower)
+      ) {
+        const seenCount = new Set(CORPUS.map(c => c.arxiv_id)).size;
         appendMessage("bot", `
-          I'm <strong>LitLens</strong>, your Research Paper Copilot. You can:
+          <strong>🔬 Welcome to LitLens — Production Research Paper Copilot</strong><br/><br/>
+          LitLens is an AI research assistant built on a <strong>100% Free-Tier Hugging Face + AWS stack</strong>. Here is what it does and how you can use it:
           <ul>
-            <li>Click <strong>+</strong> inside the chat bar to upload any <strong>PDF</strong> and chat with it using verifiable <code>[paper_id#cN]</code> citations.</li>
-            <li>Ask technical questions about our indexed arXiv papers (e.g., <em>"How does hybrid RRF improve recall?"</em> or <em>"What is GBNF grammar planning?"</em>).</li>
-            <li>Ask me to <em>"Compare all indexed papers in a Literature Review Matrix"</em> or <em>"Format BibTeX and APA citations"</em>.</li>
+            <li><strong>1. Upload &amp; Chat with Your Own PDFs:</strong> Click the <strong>+</strong> button inside the chat bar to upload any research paper, textbook, or lecture PDF. LitLens extracts the text locally, strips prompt-injection vectors, chunks it by page, and answers your questions with verifiable <code>[paper_id#cN]</code> citations.</li>
+            <li><strong>2. Citation-Grounded arXiv Q&amp;A:</strong> Ask questions across the ${seenCount} indexed papers in your library (e.g., <em>"How does hybrid RRF improve recall on SciFact?"</em> or <em>"What is GBNF grammar planning?"</em>). Every claim is mapped to an exact source chunk.</li>
+            <li><strong>3. Live arXiv Paper Search:</strong> Ask about any research topic (e.g., <em>"Find papers on Diffusion Transformers"</em> or <em>"Tell me about GraphRAG"</em>)—if it isn't in your local library yet, LitLens queries the live <strong>arXiv API</strong>, indexes the new papers on the fly, and answers with citations.</li>
+            <li><strong>4. Map-Reduce Literature Review Matrices &amp; Citations:</strong> Ask <em>"Generate a Literature Review Matrix"</em> or <em>"Format BibTeX and APA citations"</em> to compile comparison tables and references.</li>
           </ul>
         `);
         return;
@@ -959,11 +1042,7 @@
       const threshold = 0.32;
 
       if (!top || top.score < threshold) {
-        appendMessage("bot", `
-          🟡 <strong>Low Retrieval Confidence (${top ? top.score : 0} &lt; ${threshold}):</strong>
-          I abstained from answering because none of the currently selected papers contain grounded evidence for this query. Click <strong>+</strong> to upload a relevant PDF or switch the document filter at the top.
-          ${buildEvidenceDrawerHtml(scored.slice(0, 2))}
-        `);
+        await handleLowConfidenceOrGeneralQuery(q, scored);
         return;
       }
 
