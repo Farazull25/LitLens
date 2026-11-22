@@ -3,781 +3,587 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LitLens — AI Research Copilot &amp; Literature Review</title>
+  <title>LitLens</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
-      --sidebar-bg: #f8f9fa;
-      --main-bg: #ffffff;
-      --border: #e5e7eb;
-      --border-strong: #d1d5db;
-      --text: #111827;
-      --text-secondary: #4b5563;
-      --text-muted: #6b7280;
-      --accent: #2563eb;
-      --accent-soft: #eff6ff;
-      --pill-bg: #f3f4f6;
-      --pill-active: #ffffff;
-      --green: #059669;
-      --green-bg: #ecfdf5;
-      --amber: #d97706;
-      --amber-bg: #fffbeb;
+      --bg: #000000;
+      --rail: #000000;
+      --surface: #1e1e1e;
+      --surface-hover: #2a2a2a;
+      --border: #2f2f2f;
+      --text: #ececec;
+      --muted: #9b9b9b;
+      --accent: #3b82f6;
+      --green: #10a37f;
     }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: var(--main-bg);
+      width: 100%;
+      background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
+      overflow: hidden;
     }
-    .app-shell {
+    .app {
       display: flex;
       height: 100vh;
       width: 100vw;
-      overflow: hidden;
     }
 
-    /* Left Sidebar (SciSpace style) */
-    .sidebar {
-      width: 248px;
-      min-width: 248px;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
+    /* Ultra-clean narrow left icon rail */
+    .rail {
+      width: 52px;
+      background: var(--rail);
+      border-right: 1px solid #141414;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: 14px 12px;
-      user-select: none;
-    }
-    .sidebar-top {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      overflow-y: auto;
-    }
-    .brand-row {
-      display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 4px 6px 8px 6px;
+      padding: 12px 0;
+      flex-shrink: 0;
+      z-index: 10;
     }
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      font-weight: 700;
-      font-size: 0.96rem;
-      letter-spacing: 0.03em;
-      color: #1f2937;
-    }
-    .logo-layers {
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
-      background: linear-gradient(135deg, #f97316 0%, #3b82f6 100%);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 13px;
-      font-weight: 800;
-    }
-    .new-chat-row {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-    .btn-new-chat {
-      flex: 1;
-      background: #ffffff;
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 0.86rem;
-      font-weight: 600;
-      color: var(--text);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-    }
-    .btn-new-chat:hover { background: #f3f4f6; }
-    .btn-icon-box {
-      width: 35px;
-      background: #ffffff;
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-    }
-    .btn-icon-box:hover { background: #f3f4f6; }
-
-    .nav-list {
+    .rail-top, .rail-bottom {
       display: flex;
       flex-direction: column;
-      gap: 2px;
-    }
-    .nav-item {
-      display: flex;
       align-items: center;
       gap: 10px;
+    }
+    .rail-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: #cfcfcf;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.05rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .rail-btn:hover, .rail-btn.active {
+      background: #1f1f1f;
+      color: #ffffff;
+    }
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #b45309;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* Slide-over Library Drawer (toggled from rail) */
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: 52px;
+      width: 270px;
+      height: 100vh;
+      background: #0d0d0d;
+      border-right: 1px solid #222;
+      padding: 16px 14px;
+      transform: translateX(-110%);
+      transition: transform 0.2s ease;
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      padding-bottom: 8px;
+      border-bottom: 1px solid #222;
+    }
+    .drawer-item {
       padding: 8px 10px;
       border-radius: 8px;
-      font-size: 0.87rem;
-      font-weight: 500;
-      color: var(--text-secondary);
+      font-size: 0.82rem;
+      color: #c4c4c4;
       cursor: pointer;
-      border: none;
-      background: transparent;
-      text-align: left;
-      width: 100%;
-    }
-    .nav-item:hover { background: #eef0f3; color: var(--text); }
-    .nav-item.active {
-      background: #e8ecf2;
-      color: var(--text);
-      font-weight: 600;
-    }
-    .nav-icon { width: 18px; text-align: center; font-size: 0.95rem; }
-
-    .sidebar-section-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      padding: 10px 8px 4px 8px;
+      gap: 8px;
     }
-    .sidebar-section-header button {
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      font-size: 1rem;
-      color: var(--text-muted);
-      line-height: 1;
-    }
-    .library-item, .recent-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 0.81rem;
-      color: var(--text-secondary);
-      cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .library-item:hover, .recent-item:hover { background: #eef0f3; color: var(--text); }
-    .library-item.active-lib {
-      background: #dbeafe;
-      color: #1d4ed8;
-      font-weight: 600;
-    }
+    .drawer-item:hover { background: #1c1c1c; color: #fff; }
+    .drawer-item.active { background: #1e293b; color: #60a5fa; font-weight: 600; }
 
-    .sidebar-footer {
-      border-top: 1px solid var(--border);
-      padding-top: 10px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .avatar-circle {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: #111827;
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.78rem;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-    .user-meta { overflow: hidden; line-height: 1.25; }
-    .user-name {
-      font-size: 0.83rem;
-      font-weight: 600;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .user-email {
-      font-size: 0.73rem;
-      color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Main Right Workspace */
-    .main-area {
+    /* Main Workspace */
+    .main {
       flex: 1;
       display: flex;
       flex-direction: column;
       height: 100vh;
-      overflow: hidden;
-      background: var(--main-bg);
+      position: relative;
+      background: var(--bg);
     }
+
+    /* Top Minimal Bar */
     .topbar {
-      height: 50px;
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
+      height: 52px;
+      padding: 0 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
     }
-    .breadcrumbs {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.86rem;
-      color: var(--text-muted);
-    }
-    .breadcrumbs strong { color: var(--text); font-weight: 600; }
-    .topbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .pill-outline-btn {
-      background: #ffffff;
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 0.81rem;
+    .model-title {
+      font-size: 0.95rem;
       font-weight: 600;
-      color: var(--text);
+      color: #d4d4d4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .scope-chip {
+      font-size: 0.75rem;
+      background: #1a1a1a;
+      border: 1px solid #2e2e2e;
+      color: #a3a3a3;
+      padding: 3px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .scope-chip.pdf-active {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.45);
+      color: #93c5fd;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .top-link {
+      font-size: 0.82rem;
+      color: #a3a3a3;
       text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-    }
-    .pill-outline-btn:hover { background: #f9fafb; }
-
-    .workspace-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 28px 60px 28px;
-      scroll-behavior: smooth;
-    }
-
-    /* Hero container */
-    .hero-container {
-      max-width: 820px;
-      margin: 18px auto 0 auto;
-      transition: margin-top 0.2s;
-    }
-    .hero-container.compact {
-      margin-top: 4px;
-    }
-    .hero-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .hero-title {
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: #111827;
-      margin: 0;
-    }
-
-    /* Compact PDF Status Bar */
-    .pdf-compact-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 10px;
-      padding: 8px 14px;
-      margin-bottom: 10px;
-      font-size: 0.83rem;
-      color: #166534;
-    }
-    .pdf-drop-banner {
-      border: 2px dashed #93c5fd;
-      background: #f8fafc;
-      border-radius: 10px;
-      padding: 12px 16px;
-      text-align: center;
-      margin-bottom: 12px;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .pdf-drop-banner.dragover {
-      background: #eff6ff;
-      border-color: #2563eb;
-    }
-
-    .search-box-card {
-      border: 1.5px solid #93c5fd;
-      border-radius: 12px;
-      background: #ffffff;
-      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.06);
-      overflow: hidden;
-    }
-    .search-box-card:focus-within {
-      border-color: #2563eb;
-      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
-    }
-    .search-textarea {
-      width: 100%;
-      border: none;
-      outline: none;
-      resize: none;
-      padding: 13px 16px 6px 16px;
-      font-size: 0.96rem;
-      color: var(--text);
-      font-family: inherit;
-      min-height: 58px;
-    }
-    .search-textarea::placeholder { color: #9ca3af; }
-
-    .search-box-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 12px 9px 12px;
-      background: #ffffff;
-      border-top: 1px solid #f3f4f6;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .mode-pills {
-      display: inline-flex;
-      background: var(--pill-bg);
-      padding: 3px;
-      border-radius: 8px;
-      gap: 2px;
-    }
-    .mode-pill {
-      border: none;
-      background: transparent;
-      padding: 5px 12px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      cursor: pointer;
-    }
-    .mode-pill.active {
-      background: var(--pill-active);
-      color: var(--text);
-      font-weight: 600;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-    }
-    .footer-right-controls {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      flex-wrap: wrap;
-    }
-    .upload-inline-btn {
-      border: 1px solid var(--border-strong);
-      background: #f9fafb;
-      color: var(--text-secondary);
-      border-radius: 7px;
       padding: 5px 10px;
-      font-size: 0.79rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
+      border-radius: 999px;
+      transition: background 0.15s, color 0.15s;
     }
-    .upload-inline-btn:hover { background: #f3f4f6; color: var(--text); }
-    .submit-arrow-btn {
-      height: 30px;
-      padding: 0 12px;
-      border-radius: 7px;
-      border: none;
-      background: #111827;
-      color: #ffffff;
-      font-size: 0.84rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
+    .top-link:hover { background: #1a1a1a; color: #fff; }
+
+    /* Landing View ("What's on the agenda today?") */
+    .landing-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      padding: 0 20px 60px 20px;
     }
-    .submit-arrow-btn:hover { background: #2563eb; }
+    .landing-heading {
+      font-size: 1.85rem;
+      font-weight: 500;
+      color: #ffffff;
+      margin: 0 0 28px 0;
+      letter-spacing: -0.01em;
+      text-align: center;
+    }
 
-    .try-searching-row {
-      display: flex;
+    /* Pill Prompt Bar */
+    .prompt-wrap {
+      width: 100%;
+      max-width: 720px;
+    }
+    .attached-file-pill {
+      display: inline-flex;
       align-items: center;
       gap: 8px;
-      margin-top: 11px;
-      flex-wrap: wrap;
-    }
-    .try-label { font-size: 0.8rem; color: var(--text-muted); }
-    .suggestion-chip {
-      background: #ffffff;
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      padding: 5px 11px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #93c5fd;
+      padding: 5px 12px;
+      border-radius: 999px;
       font-size: 0.79rem;
-      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .attached-file-pill button {
+      background: transparent;
+      border: none;
+      color: #93c5fd;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
+      font-size: 0.9rem;
+      padding: 0;
+      line-height: 1;
     }
-    .suggestion-chip:hover { background: #f9fafb; border-color: #9ca3af; }
-
-    /* Results & Chat Thread Area */
-    .results-container {
-      max-width: 820px;
-      margin: 18px auto 0 auto;
-    }
-    .white-card {
-      background: #ffffff;
+    .prompt-bar {
+      width: 100%;
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    }
-    .cite-badge {
-      display: inline-block;
-      background: var(--accent-soft);
-      color: var(--accent);
-      border: 1px solid #bfdbfe;
-      padding: 1px 7px;
-      border-radius: 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.79rem;
-      font-weight: 600;
-      margin: 0 2px;
-    }
-    .status-pill-green {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: var(--green-bg);
-      color: var(--green);
-      border: 1px solid #a7f3d0;
-      padding: 3px 10px;
       border-radius: 999px;
-      font-size: 0.76rem;
-      font-weight: 600;
-    }
-    .status-pill-amber {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: var(--amber-bg);
-      color: var(--amber);
-      border: 1px solid #fde68a;
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 0.76rem;
-      font-weight: 600;
-    }
-
-    .chat-thread-card {
-      margin-bottom: 18px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      background: #ffffff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    }
-    .chat-question-bar {
-      background: #f8fafc;
-      border-bottom: 1px solid var(--border);
-      padding: 11px 16px;
-      font-weight: 600;
-      font-size: 0.92rem;
-      color: #1e293b;
+      height: 54px;
+      padding: 0 10px 0 14px;
       display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+      transition: border-color 0.15s;
     }
-    .chat-answer-body {
-      padding: 16px 18px;
-      font-size: 0.92rem;
-      line-height: 1.6;
-      color: #111827;
+    .prompt-bar:focus-within {
+      border-color: #4b5563;
     }
-    .chat-answer-body ul {
+    .plus-upload-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #b4b4b4;
+      font-size: 1.35rem;
+      font-weight: 300;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    .plus-upload-btn:hover {
+      background: #2e2e2e;
+      color: #ffffff;
+    }
+    .prompt-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 0.98rem;
+      font-family: inherit;
+    }
+    .prompt-input::placeholder {
+      color: #8e8e8e;
+    }
+    .think-toggle {
+      background: transparent;
+      border: none;
+      color: #9b9b9b;
+      font-size: 0.84rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .think-toggle:hover { background: #2c2c2c; color: #fff; }
+    .think-toggle.active {
+      background: rgba(59, 130, 246, 0.18);
+      color: #60a5fa;
+    }
+    .send-circle-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: #2563eb;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .send-circle-btn:hover { background: #1d4ed8; }
+
+    /* Clean vertical action list below prompt bar (matches screenshot) */
+    .action-list {
+      width: 100%;
+      max-width: 720px;
+      margin-top: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-left: 12px;
+    }
+    .action-item {
+      background: transparent;
+      border: none;
+      color: #9e9e9e;
+      font-size: 0.91rem;
+      padding: 9px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      width: fit-content;
+      transition: color 0.15s, background 0.15s;
+    }
+    .action-item:hover {
+      color: #ffffff;
+      background: #141414;
+    }
+    .action-icon {
+      font-size: 1rem;
+      width: 20px;
+      text-align: center;
+      opacity: 0.85;
+    }
+
+    /* Active Chat Conversation View */
+    .chat-view {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      height: calc(100vh - 52px);
+      overflow: hidden;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 20px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .msg-user {
+      align-self: flex-end;
+      background: #262626;
+      color: #f3f3f3;
+      padding: 11px 16px;
+      border-radius: 18px;
+      max-width: 78%;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .msg-bot {
+      align-self: flex-start;
+      color: #ececec;
+      width: 100%;
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+    .msg-bot ul {
       margin: 8px 0;
       padding-left: 20px;
     }
-    .chat-answer-body li {
-      margin-bottom: 6px;
+    .msg-bot li { margin-bottom: 6px; }
+    .cite-tag {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.16);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      padding: 1px 7px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+      margin: 0 2px;
     }
-    .chunk-evidence-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 10px;
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid #f1f5f9;
-    }
-    .chunk-mini-card {
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 8px;
+    .evidence-drawer {
+      margin-top: 10px;
+      background: #121212;
+      border: 1px solid #242424;
+      border-radius: 10px;
       padding: 10px 12px;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
+      font-size: 0.81rem;
+      color: #a3a3a3;
+    }
+    .evidence-drawer summary {
+      cursor: pointer;
+      color: #9ca3af;
+      font-weight: 500;
+      user-select: none;
+    }
+    .evidence-chunk {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #222;
       line-height: 1.45;
     }
 
-    table.lit-table {
+    .chat-bottom-bar {
+      padding: 10px 20px 22px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000000 30%);
+    }
+
+    table.dark-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.84rem;
-      margin-top: 12px;
+      font-size: 0.83rem;
+      margin-top: 10px;
     }
-    table.lit-table th, table.lit-table td {
-      border: 1px solid var(--border);
-      padding: 9px 11px;
+    table.dark-table th, table.dark-table td {
+      border: 1px solid #2a2a2a;
+      padding: 8px 10px;
       text-align: left;
       vertical-align: top;
-      line-height: 1.45;
     }
-    table.lit-table th {
-      background: #f9fafb;
-      color: #374151;
-      font-weight: 600;
-    }
-
-    @media (max-width: 780px) {
-      .sidebar { display: none; }
+    table.dark-table th {
+      background: #181818;
+      color: #e5e5e5;
     }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <!-- Left Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-top">
-        <div class="brand-row">
-          <div class="brand-logo">
-            <span class="logo-layers">L</span>
-            <span>LITLENS</span>
-          </div>
-          <span style="font-size:0.72rem;color:var(--text-muted);border:1px solid var(--border);padding:2px 6px;border-radius:4px;">v1.0</span>
-        </div>
-
-        <div class="new-chat-row">
-          <button class="btn-new-chat" onclick="startGeneralAgentChat()">
-            <span>＋</span> New Chat
-          </button>
-          <button class="btn-icon-box" title="Focus Chat Input" onclick="document.getElementById('main-query-input').focus()">
-            🔍
-          </button>
-        </div>
-
-        <nav class="nav-list">
-          <button class="nav-item" id="nav-general" onclick="startGeneralAgentChat()">
-            <span class="nav-icon">🤖</span> General Agent Chat
-          </button>
-          <button class="nav-item" id="nav-pdf" onclick="setWorkspaceSection('chat_pdf')">
-            <span class="nav-icon">💬</span> Chat with PDF
-          </button>
-          <button class="nav-item active" id="nav-lit" onclick="setWorkspaceSection('literature_review')">
-            <span class="nav-icon">📑</span> Literature Review
-          </button>
-          <button class="nav-item" id="nav-agents" onclick="setWorkspaceSection('agent_gallery')">
-            <span class="nav-icon">❖</span> Agent Gallery &amp; Tools
-          </button>
-          <button class="nav-item" id="nav-eval" onclick="setWorkspaceSection('eval_benchmarks')">
-            <span class="nav-icon">📊</span> 30-Q Eval Benchmarks
-          </button>
-        </nav>
-
-        <!-- My Library (Uploaded PDFs + Seed Papers) -->
-        <div class="sidebar-section-header">
-          <span>My Library (<span id="lib-count">6</span>)</span>
-          <button title="Upload PDF to Library" onclick="document.getElementById('hidden-pdf-input').click()">＋</button>
-        </div>
-        <div id="sidebar-library-list"></div>
-
-        <!-- Recent Chats -->
-        <div class="sidebar-section-header">
-          <span>Quick Prompts</span>
-        </div>
-        <div id="sidebar-recent-chats">
-          <div class="recent-item" onclick="quickRunQuery('What can you do as the LitLens Research Copilot agent?')">
-            🤖 What can LitLens agent do?
-          </div>
-          <div class="recent-item" onclick="quickRunQuery('By what percentage does hybrid RRF improve top-5 recall on SciFact and HotpotQA?')">
-            🔍 Hybrid RRF SciFact Recall
-          </div>
-          <div class="recent-item" onclick="quickRunQuery('Compare all indexed papers in a Literature Review Matrix')">
-            📑 Build Literature Matrix
-          </div>
-        </div>
+  <div class="app">
+    <!-- Minimal Left Icon Rail -->
+    <aside class="rail">
+      <div class="rail-top">
+        <button class="rail-btn" title="LitLens Home / New Chat" onclick="resetToAgenda()">
+          ✦
+        </button>
+        <button class="rail-btn" title="New Chat" onclick="resetToAgenda()">
+          ✎
+        </button>
+        <button class="rail-btn" title="Upload PDF" onclick="document.getElementById('pdf-input').click()">
+          📎
+        </button>
+        <button class="rail-btn" id="btn-drawer" title="My Library &amp; Indexed Papers" onclick="toggleDrawer()">
+          📚
+        </button>
       </div>
-
-      <!-- User Profile Footer -->
-      <div class="sidebar-footer">
-        <div class="avatar-circle">MF</div>
-        <div class="user-meta">
-          <div class="user-name">Muhammad Faraz Malik</div>
-          <div class="user-email">MF180 • Free Tier Stack</div>
-        </div>
+      <div class="rail-bottom">
+        <div class="avatar" title="Muhammad Faraz Malik (MF180)" onclick="resetToAgenda()">MF</div>
       </div>
     </aside>
 
-    <!-- Main Right Workspace -->
-    <div class="main-area">
-      <!-- Top Breadcrumb Bar -->
+    <!-- Slide-out Library Drawer -->
+    <div class="drawer" id="library-drawer">
+      <div class="drawer-header">
+        <span>My Library (<span id="drawer-count">6</span>)</span>
+        <button style="background:none;border:none;color:#888;cursor:pointer;font-size:1rem;" onclick="toggleDrawer()">✕</button>
+      </div>
+      <button
+        style="background:#1e293b;border:1px solid #334155;color:#93c5fd;padding:8px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;"
+        onclick="document.getElementById('pdf-input').click()"
+      >
+        ＋ Upload Research PDF
+      </button>
+      <div class="drawer-item" id="scope-all-item" onclick="setActivePaperScope('ALL')">
+        <span>🌐 All Papers + General Chat</span>
+      </div>
+      <div id="drawer-papers-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
+
+    <!-- Hidden File Input -->
+    <input
+      type="file"
+      id="pdf-input"
+      accept=".pdf,application/pdf"
+      multiple
+      style="display:none;"
+      onchange="handlePdfUpload(this.files)"
+    />
+
+    <!-- Main Center Area -->
+    <div class="main" onclick="closeDrawerIfOpen(event)">
+      <!-- Top Minimal Header -->
       <header class="topbar">
-        <div class="breadcrumbs">
-          <span style="cursor:pointer;" onclick="startGeneralAgentChat()">Home</span>
-          <span>›</span>
-          <strong id="breadcrumb-current">Literature Review</strong>
+        <div class="model-title">
+          <span>LitLens</span>
+          <span class="scope-chip" id="active-scope-chip" onclick="toggleDrawer()">All Library Papers ▾</span>
         </div>
-        <div class="topbar-actions">
-          <button class="pill-outline-btn" onclick="startGeneralAgentChat()">
-            🤖 General Copilot Chat
-          </button>
-          <button class="pill-outline-btn" onclick="document.getElementById('hidden-pdf-input').click()">
-            📄 Upload PDF
-          </button>
-          <a class="pill-outline-btn" href="https://github.com/farazmalik180/LitLens" target="_blank">
-            ↗ GitHub Repo
-          </a>
+        <div class="topbar-right">
+          <a class="top-link" href="https://github.com/farazmalik180/LitLens" target="_blank">✦ GitHub</a>
         </div>
       </header>
 
-      <!-- Hidden File Input for PDF Upload -->
-      <input
-        type="file"
-        id="hidden-pdf-input"
-        accept=".pdf,application/pdf"
-        multiple
-        style="display:none;"
-        onchange="handlePdfFiles(this.files)"
-      />
+      <!-- 1. Centered Landing View ("What's on the agenda today?") -->
+      <div class="landing-view" id="landing-view">
+        <h1 class="landing-heading">What's on the agenda today?</h1>
 
-      <!-- Scrollable Content -->
-      <div class="workspace-scroll" id="workspace-scroll">
-        <!-- Hero Search / Chat Input Box -->
-        <div class="hero-container compact" id="hero-container">
-          <div class="hero-header-row">
-            <h1 class="hero-title" id="hero-heading">Literature Search &amp; Agent Chat</h1>
-            <div style="font-size:0.82rem;color:var(--text-secondary);">
-              🌐 English (en) • LangGraph Plan-then-Execute
-            </div>
-          </div>
-
-          <!-- Active Uploaded PDF Status Banner (compact so results below are always visible!) -->
-          <div id="active-pdf-bar" style="display:none;"></div>
-
-          <!-- Optional Drag & Drop Box when no PDF is uploaded yet in Chat with PDF tab -->
-          <div
-            id="pdf-upload-banner"
-            class="pdf-drop-banner"
-            style="display:none;"
-            ondragover="event.preventDefault(); this.classList.add('dragover');"
-            ondragleave="this.classList.remove('dragover');"
-            ondrop="handlePdfDrop(event)"
-          >
-            <div style="font-weight:600;font-size:0.9rem;margin-bottom:3px;">
-              📄 Drop any PDF(s) here or click <u style="cursor:pointer;color:var(--accent);" onclick="document.getElementById('hidden-pdf-input').click()">Choose PDF File(s)</u>
-            </div>
-            <div style="font-size:0.78rem;color:var(--text-muted);">
-              Extracts all pages locally via PDF.js • Automatically generates an instant cited summary &amp; unlocks full Q&amp;A
-            </div>
-          </div>
-
-          <!-- Central Search / Chat Prompt Box -->
-          <div class="search-box-card">
-            <textarea
-              id="main-query-input"
-              class="search-textarea"
-              placeholder="Ask anything: chat with your uploaded PDF, search arXiv papers, generate a Literature Review Matrix, or ask general research questions..."
-              onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); executeSearchOrChat(); }"
-            ></textarea>
-            <div class="search-box-footer">
-              <div class="mode-pills">
-                <button class="mode-pill active" id="mode-standard" onclick="setSearchMode('standard', this)">
-                  Standard Chat
-                </button>
-                <button class="mode-pill" id="mode-hq" onclick="setSearchMode('high_quality', this)">
-                  High Quality (Multi-Chunk)
-                </button>
-                <button class="mode-pill" id="mode-deep" onclick="setSearchMode('deep_review', this)">
-                  Deep Review Matrix
-                </button>
-              </div>
-
-              <div class="footer-right-controls">
-                <select
-                  id="paper-scope-select"
-                  onchange="onScopeDropdownChange(this.value)"
-                  style="border:1px solid var(--border-strong);border-radius:7px;padding:5px 9px;font-size:0.79rem;color:var(--text-secondary);background:#f9fafb;max-width:250px;"
-                >
-                  <option value="ALL">Scope: All Library + General Agent</option>
-                </select>
-                <button class="upload-inline-btn" title="Upload PDF Research Paper or Lecture Notes" onclick="document.getElementById('hidden-pdf-input').click()">
-                  📎 Upload PDF
-                </button>
-                <button class="submit-arrow-btn" title="Send message (Enter)" onclick="executeSearchOrChat()">
-                  Ask Agent →
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dynamic Suggestion Chips (updates automatically when a PDF is uploaded!) -->
-          <div class="try-searching-row" id="suggestion-chips-row">
-            <span class="try-label">Try asking:</span>
-            <button
-              class="suggestion-chip"
-              onclick="quickRunQuery('Summarize the key concepts, definitions, and main takeaways of the active document')"
-            >
-              📄 Summarize active PDF / paper
+        <div class="prompt-wrap">
+          <div id="landing-file-pill-area"></div>
+          <div class="prompt-bar">
+            <button class="plus-upload-btn" title="Upload PDF Research Paper" onclick="document.getElementById('pdf-input').click()">
+              +
             </button>
-            <button
-              class="suggestion-chip"
-              onclick="quickRunQuery('By what percentage does hybrid RRF improve top-5 recall on SciFact and HotpotQA?')"
-            >
-              🔍 Hybrid RRF recall on SciFact?
+            <input
+              type="text"
+              id="landing-input"
+              class="prompt-input"
+              placeholder="Ask LitLens or click + to upload a PDF"
+              onkeydown="if(event.key==='Enter') submitFromLanding();"
+            />
+            <button class="think-toggle" id="think-btn-landing" onclick="toggleThinkMode()" title="Toggle Multi-Chunk Deep Grounding">
+              🧠 Think
             </button>
-            <button
-              class="suggestion-chip"
-              onclick="quickRunQuery('Format BibTeX and APA citations for the indexed papers')"
-            >
-              📚 Format BibTeX &amp; APA Citations
-            </button>
-            <button
-              class="suggestion-chip"
-              onclick="quickRunQuery('Compare all indexed papers in a Literature Review Matrix')"
-            >
-              📑 Build Literature Review Matrix
+            <button class="send-circle-btn" title="Send" onclick="submitFromLanding()">
+              ↑
             </button>
           </div>
         </div>
 
-        <!-- Dynamic Output Workspace Immediately Visible Below Search Box -->
-        <div class="results-container" id="results-area"></div>
+        <div class="action-list">
+          <button class="action-item" onclick="document.getElementById('pdf-input').click()">
+            <span class="action-icon">📄</span>
+            <span>Upload &amp; summarize a PDF paper</span>
+          </button>
+          <button class="action-item" onclick="runQuickPrompt('Compare all indexed papers in a Literature Review Matrix')">
+            <span class="action-icon">📑</span>
+            <span>Generate a Literature Review Matrix</span>
+          </button>
+          <button class="action-item" onclick="runQuickPrompt('By what percentage does hybrid RRF improve top-5 recall on SciFact and HotpotQA?')">
+            <span class="action-icon">🌐</span>
+            <span>Search indexed arXiv research papers</span>
+          </button>
+          <button class="action-item" onclick="runQuickPrompt('Show the 30-question evaluation benchmark results')">
+            <span class="action-icon">📊</span>
+            <span>View 30-question evaluation benchmark</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Conversation View (switches in cleanly as soon as you chat or upload a PDF) -->
+      <div class="chat-view" id="chat-view">
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <div class="chat-bottom-bar">
+          <div class="prompt-wrap">
+            <div id="chat-file-pill-area"></div>
+            <div class="prompt-bar">
+              <button class="plus-upload-btn" title="Upload PDF Research Paper" onclick="document.getElementById('pdf-input').click()">
+                +
+              </button>
+              <input
+                type="text"
+                id="chat-input"
+                class="prompt-input"
+                placeholder="Ask a follow-up or click + to upload another PDF..."
+                onkeydown="if(event.key==='Enter') submitFromChat();"
+              />
+              <button class="think-toggle" id="think-btn-chat" onclick="toggleThinkMode()" title="Toggle Multi-Chunk Deep Grounding">
+                🧠 Think
+              </button>
+              <button class="send-circle-btn" title="Send" onclick="submitFromChat()">
+                ↑
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -787,9 +593,8 @@
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     }
 
-    let currentMode = "standard";
-    let currentSection = "literature_review";
-    let chatTurns = [];
+    let thinkMode = false;
+    let activeScope = "ALL"; // "ALL" or a specific paperId like "upload-..."
 
     const CORPUS = [
       {
@@ -854,24 +659,37 @@
       }
     ];
 
-    function sanitizeUntrustedText(raw) {
-      let cleaned = raw.replace(/[\u200b\u200c\u200d\u2060\ufeff\u00ad]/g, "");
-      const patterns = [
-        /ignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions/gi,
-        /(?:you\s+are\s+now|act\s+as\s+a|new\s+system\s+prompt)/gi,
-        /<\/?(?:untrusted_paper_content|system|instruction|prompt)>/gi
-      ];
-      let blocked = false;
-      patterns.forEach(p => {
-        if (p.test(cleaned)) {
-          blocked = true;
-          cleaned = cleaned.replace(p, "[REDACTED_POTENTIAL_INJECTION]");
-        }
-      });
-      return { cleaned, blocked };
+    function toggleDrawer() {
+      document.getElementById("library-drawer").classList.toggle("open");
     }
 
-    function refreshLibraryUI() {
+    function closeDrawerIfOpen(e) {
+      const dr = document.getElementById("library-drawer");
+      if (dr.classList.contains("open") && !e.target.closest("#active-scope-chip")) {
+        dr.classList.remove("open");
+      }
+    }
+
+    function toggleThinkMode() {
+      thinkMode = !thinkMode;
+      document.getElementById("think-btn-landing").classList.toggle("active", thinkMode);
+      document.getElementById("think-btn-chat").classList.toggle("active", thinkMode);
+    }
+
+    function resetToAgenda() {
+      document.getElementById("chat-messages").innerHTML = "";
+      document.getElementById("chat-view").style.display = "none";
+      document.getElementById("landing-view").style.display = "flex";
+      document.getElementById("library-drawer").classList.remove("open");
+      document.getElementById("landing-input").focus();
+    }
+
+    function switchToChatView() {
+      document.getElementById("landing-view").style.display = "none";
+      document.getElementById("chat-view").style.display = "flex";
+    }
+
+    function updateLibraryAndPills() {
       const seen = new Map();
       CORPUS.forEach(c => {
         if (!seen.has(c.arxiv_id)) {
@@ -880,299 +698,258 @@
         seen.get(c.arxiv_id).count += 1;
       });
 
-      document.getElementById("lib-count").textContent = String(seen.size);
-      const currentScope = document.getElementById("paper-scope-select").value;
+      document.getElementById("drawer-count").textContent = String(seen.size);
+      document.getElementById("scope-all-item").className = "drawer-item" + (activeScope === "ALL" ? " active" : "");
 
-      const libList = document.getElementById("sidebar-library-list");
-      let libHtml = "";
+      const listEl = document.getElementById("drawer-papers-list");
+      let html = "";
       seen.forEach((meta, pid) => {
-        const icon = meta.source === "uploaded" ? "📄" : "📁";
-        const activeClass = currentScope === pid ? "active-lib" : "";
-        libHtml += `
-          <div class="library-item ${activeClass}" title="${meta.title} (${pid})" onclick="selectPaperScope('${pid}')">
-            <span>${icon} ${meta.title.slice(0, 22)}${meta.title.length > 22 ? "..." : ""}</span>
-            <span style="font-size:0.72rem;color:var(--text-muted);">${meta.count}c</span>
+        const icon = meta.source === "uploaded" ? "📄" : "📚";
+        const act = activeScope === pid ? " active" : "";
+        html += `
+          <div class="drawer-item${act}" onclick="setActivePaperScope('${pid}')">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon} ${meta.title}</span>
+            <span style="font-size:0.72rem;color:#777;">${meta.count}c</span>
           </div>
         `;
       });
-      libList.innerHTML = libHtml;
+      listEl.innerHTML = html;
 
-      const sel = document.getElementById("paper-scope-select");
-      sel.innerHTML = `<option value="ALL">Scope: All Library + General Agent (${seen.size} docs)</option>`;
-      seen.forEach((meta, pid) => {
-        const opt = document.createElement("option");
-        opt.value = pid;
-        opt.textContent = `${meta.source === "uploaded" ? "📄" : "📚"} ${meta.title.slice(0, 32)} (${pid})`;
-        sel.appendChild(opt);
+      const chip = document.getElementById("active-scope-chip");
+      const pillLanding = document.getElementById("landing-file-pill-area");
+      const pillChat = document.getElementById("chat-file-pill-area");
+
+      if (activeScope === "ALL" || !seen.has(activeScope)) {
+        chip.textContent = `All Library Papers (${seen.size}) ▾`;
+        chip.className = "scope-chip";
+        pillLanding.innerHTML = "";
+        pillChat.innerHTML = "";
+      } else {
+        const meta = seen.get(activeScope);
+        chip.textContent = `📄 ${meta.title.slice(0, 32)} (${meta.count} chunks) ▾`;
+        chip.className = "scope-chip pdf-active";
+        const pillHtml = `
+          <div class="attached-file-pill">
+            <span>📄 Chatting with: <strong>${meta.title.slice(0, 48)}</strong> (${meta.count} chunks)</span>
+            <button title="Clear filter and chat across all papers" onclick="setActivePaperScope('ALL')">✕</button>
+          </div>
+        `;
+        pillLanding.innerHTML = pillHtml;
+        pillChat.innerHTML = pillHtml;
+      }
+    }
+
+    function setActivePaperScope(pid) {
+      activeScope = pid;
+      updateLibraryAndPills();
+      document.getElementById("library-drawer").classList.remove("open");
+    }
+
+    function sanitizeText(raw) {
+      let cleaned = raw.replace(/[\u200b\u200c\u200d\u2060\ufeff\u00ad]/g, "");
+      const rules = [
+        /ignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions/gi,
+        /(?:you\s+are\s+now|act\s+as\s+a|new\s+system\s+prompt)/gi
+      ];
+      let blocked = false;
+      rules.forEach(r => {
+        if (r.test(cleaned)) {
+          blocked = true;
+          cleaned = cleaned.replace(r, "[REDACTED_INJECTION]");
+        }
       });
-      if ([...sel.options].some(o => o.value === currentScope)) sel.value = currentScope;
-    }
-
-    function onScopeDropdownChange(val) {
-      refreshLibraryUI();
-      if (val === "ALL") {
-        document.getElementById("active-pdf-bar").style.display = "none";
-      } else {
-        const docChunks = CORPUS.filter(c => c.arxiv_id === val);
-        if (docChunks.length) {
-          showActivePdfBanner(val, docChunks[0].title, docChunks.length);
-        }
-      }
-    }
-
-    function showActivePdfBanner(paperId, title, chunkCount) {
-      const bar = document.getElementById("active-pdf-bar");
-      bar.style.display = "block";
-      bar.innerHTML = `
-        <div class="pdf-compact-bar">
-          <div>
-            ✅ <strong>Active Document:</strong> ${title.slice(0, 75)} (<code>${paperId}</code> • <strong>${chunkCount} indexed chunks</strong>)
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button class="pill-outline-btn" style="padding:3px 9px;font-size:0.76rem;" onclick="document.getElementById('hidden-pdf-input').click()">＋ Upload Another PDF</button>
-            <button class="pill-outline-btn" style="padding:3px 9px;font-size:0.76rem;" onclick="switchToAllScope()">Search All Papers</button>
-          </div>
-        </div>
-      `;
-      document.getElementById("pdf-upload-banner").style.display = "none";
-    }
-
-    function switchToAllScope() {
-      document.getElementById("paper-scope-select").value = "ALL";
-      document.getElementById("active-pdf-bar").style.display = "none";
-      refreshLibraryUI();
-    }
-
-    function selectPaperScope(pid) {
-      document.getElementById("paper-scope-select").value = pid;
-      refreshLibraryUI();
-      const docChunks = CORPUS.filter(c => c.arxiv_id === pid);
-      if (!docChunks.length) return;
-      showActivePdfBanner(pid, docChunks[0].title, docChunks.length);
-      document.getElementById("main-query-input").value = `Summarize the main topics, key definitions, and core takeaways of ${docChunks[0].title}`;
-      executeSearchOrChat();
-    }
-
-    function startGeneralAgentChat() {
-      document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
-      document.getElementById("nav-general").classList.add("active");
-      document.getElementById("paper-scope-select").value = "ALL";
-      document.getElementById("active-pdf-bar").style.display = "none";
-      document.getElementById("pdf-upload-banner").style.display = "none";
-      document.getElementById("hero-heading").textContent = "General Copilot Agent Chat";
-      document.getElementById("breadcrumb-current").textContent = "General Agent Chat";
-      refreshLibraryUI();
-
-      if (chatTurns.length === 0) {
-        quickRunQuery("What can you do as the LitLens Research Copilot agent?");
-      } else {
-        renderChatTurns();
-      }
-      document.getElementById("main-query-input").focus();
-    }
-
-    function setSearchMode(mode, btn) {
-      currentMode = mode;
-      document.querySelectorAll(".mode-pill").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      if (mode === "deep_review") {
-        renderDeepLiteratureReviewMatrix();
-      }
-    }
-
-    function setWorkspaceSection(section) {
-      currentSection = section;
-      document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
-      const banner = document.getElementById("pdf-upload-banner");
-      const heading = document.getElementById("hero-heading");
-      const bread = document.getElementById("breadcrumb-current");
-
-      if (section === "chat_pdf") {
-        document.getElementById("nav-pdf").classList.add("active");
-        const hasUploaded = CORPUS.some(c => c.source === "uploaded");
-        banner.style.display = hasUploaded ? "none" : "block";
-        heading.textContent = "Chat with PDF";
-        bread.textContent = "Chat with PDF";
-        if (chatTurns.length > 0) renderChatTurns();
-      } else if (section === "agent_gallery") {
-        document.getElementById("nav-agents").classList.add("active");
-        banner.style.display = "none";
-        heading.textContent = "LangGraph Agent Tools & AWS Free-Tier Stack";
-        bread.textContent = "Agent Gallery";
-        renderAgentArchitectureCard();
-      } else if (section === "eval_benchmarks") {
-        document.getElementById("nav-eval").classList.add("active");
-        banner.style.display = "none";
-        heading.textContent = "30-Question Golden Evaluation Benchmark";
-        bread.textContent = "Eval Benchmarks";
-        renderEvalBenchmarkCard();
-      } else {
-        document.getElementById("nav-lit").classList.add("active");
-        banner.style.display = "none";
-        heading.textContent = "Literature Search & Agent Chat";
-        bread.textContent = "Literature Review";
-        if (chatTurns.length > 0) {
-          renderChatTurns();
-        } else {
-          renderDeepLiteratureReviewMatrix();
-        }
-      }
-    }
-
-    function quickRunQuery(q) {
-      document.getElementById("main-query-input").value = q;
-      executeSearchOrChat();
+      return { cleaned, blocked };
     }
 
     function tokenize(str) {
       const stop = new Set([
         "the","and","for","that","with","this","from","are","was","were","what","which","how","much","many",
         "does","by","in","on","of","to","is","paper","uploaded","about","why","summarize","summary","research",
-        "problem","methodology","key","findings","main","topics","explain","tell","me","give","overview",
-        "document","pdf","lecture","cheat","sheet","notes"
+        "problem","methodology","key","findings","main","topics","explain","tell","me","give","overview","document","pdf"
       ]);
       return (str.toLowerCase().match(/[a-z0-9_.]+/g) || []).filter(w => w.length > 1 && !stop.has(w));
     }
 
-    function buildDocumentOverviewHtml(docChunks) {
+    function appendMessage(role, html) {
+      switchToChatView();
+      const box = document.getElementById("chat-messages");
+      const div = document.createElement("div");
+      div.className = role === "user" ? "msg-user" : "msg-bot";
+      div.innerHTML = html;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function submitFromLanding() {
+      const inp = document.getElementById("landing-input");
+      const q = inp.value.trim();
+      if (!q) return;
+      inp.value = "";
+      processUserQuery(q);
+    }
+
+    function submitFromChat() {
+      const inp = document.getElementById("chat-input");
+      const q = inp.value.trim();
+      if (!q) return;
+      inp.value = "";
+      processUserQuery(q);
+    }
+
+    function runQuickPrompt(q) {
+      processUserQuery(q);
+    }
+
+    function buildEvidenceDrawerHtml(chunks) {
+      if (!chunks || !chunks.length) return "";
+      const items = chunks.map(c => `
+        <div class="evidence-chunk">
+          <div><span class="cite-tag">[${c.chunk_id}]</span> <strong>${c.title}</strong> (${c.section}, p.${c.page}) • Score: <code>${c.score}</code></div>
+          <div style="margin-top:3px;">${c.text.slice(0, 260)}${c.text.length > 260 ? "..." : ""}</div>
+        </div>
+      `).join("");
+      return `
+        <details class="evidence-drawer">
+          <summary>🔍 View ${chunks.length} retrieved source chunks &amp; citation verification</summary>
+          ${items}
+        </details>
+      `;
+    }
+
+    function buildDocumentSummaryHtml(docChunks) {
       const title = docChunks[0].title;
       const pid = docChunks[0].arxiv_id;
       const totalPages = Math.max(...docChunks.map(c => c.page || 1));
-      // Pick up to 4 representative chunks across the document (beginning, middle, end)
-      const indices = [0];
-      if (docChunks.length > 2) indices.push(1);
-      if (docChunks.length > 5) indices.push(Math.floor(docChunks.length / 2));
-      if (docChunks.length > 8) indices.push(docChunks.length - 1);
+      const idxs = [0];
+      if (docChunks.length > 1) idxs.push(1);
+      if (docChunks.length > 4) idxs.push(Math.floor(docChunks.length / 2));
+      if (docChunks.length > 7) idxs.push(docChunks.length - 1);
 
-      const bullets = indices.map(i => {
+      const bullets = idxs.map(i => {
         const c = docChunks[i];
-        const cleanExcerpt = c.text.slice(0, 260).trim();
-        return `<li><strong>${c.section} (p.${c.page}):</strong> ${cleanExcerpt}${c.text.length > 260 ? "..." : ""} <span class="cite-badge">[${c.chunk_id}]</span></li>`;
+        return `<li><strong>${c.section}:</strong> ${c.text.slice(0, 260).trim()}${c.text.length > 260 ? "..." : ""} <span class="cite-tag">[${c.chunk_id}]</span></li>`;
       }).join("");
 
+      const repChunks = idxs.map(i => ({ ...docChunks[i], score: 0.95 }));
       return `
         <div>
-          <strong>📄 Structured Document Synthesis — <em>${title}</em></strong> (<code>${pid}</code> • ${docChunks.length} chunks across ${totalPages} page(s)):
+          <strong>📄 ${title}</strong> (<code>${pid}</code> • ${docChunks.length} indexed chunks across ${totalPages} page(s)):
           <ul>${bullets}</ul>
-          <div style="font-size:0.83rem;color:var(--text-secondary);margin-top:6px;">
-            💡 <em>Tip: You can ask specific questions about any term, formula, theorem, or page in this PDF using the chat box above!</em>
-          </div>
+          <span style="color:var(--muted);font-size:0.86rem;">Ask any question below about specific topics, definitions, formulas, or sections in this PDF.</span>
+          ${buildEvidenceDrawerHtml(repChunks)}
         </div>
       `;
     }
 
-    function executeSearchOrChat() {
-      const inputEl = document.getElementById("main-query-input");
-      const q = inputEl.value.trim();
-      if (!q) return;
+    function processUserQuery(q) {
+      appendMessage("user", q.replace(/</g, "&lt;"));
 
-      // 1. Check if user asked for Literature Review Matrix
-      if (/literature review|comparison matrix|compare all/i.test(q) || currentMode === "deep_review") {
-        currentMode = "standard";
-        document.querySelectorAll(".mode-pill").forEach(b => b.classList.remove("active"));
-        document.getElementById("mode-standard").classList.add("active");
-        renderDeepLiteratureReviewMatrix(q);
-        return;
-      }
-
-      // 2. Prompt-injection guardrail check
-      const { blocked } = sanitizeUntrustedText(q);
+      const { blocked } = sanitizeText(q);
       if (blocked) {
-        chatTurns.unshift({
-          user: q,
-          status: "amber",
-          planText: "guardrail_filter → block_injection",
-          badgeText: "Security Guardrail Triggered",
-          answerHtml: "🛡️ This request matched a prompt-injection override pattern (<code>system_override</code> / <code>role_hijack</code>) and was blocked.",
-          chunks: []
-        });
-        renderChatTurns();
+        appendMessage("bot", "🛡️ <strong>Guardrail Alert:</strong> Request blocked by prompt-injection defense.");
         return;
       }
 
-      // 3. Check for general conversational / meta-agent commands (when scope is ALL or general query)
       const qLower = q.toLowerCase();
-      if (/^(hi|hello|hey|who are you|what can you do|help|capabilities)/i.test(qLower) || qLower.includes("litlens research copilot agent")) {
-        const uploadedDocs = [...new Set(CORPUS.filter(c => c.source === "uploaded").map(c => c.title))];
-        const upText = uploadedDocs.length
-          ? `<br/>📄 <strong>Currently Uploaded PDFs in Your Session:</strong> ${uploadedDocs.map(t => `<em>${t}</em>`).join(", ")}`
-          : `<br/>📄 <strong>Upload Your Own PDFs:</strong> Click <strong>📎 Upload PDF</strong> to parse and chat with any research paper, textbook, or lecture notes.`;
 
-        chatTurns.unshift({
-          user: q,
-          status: "green",
-          planText: "intent:general_assistant → describe_tools",
-          badgeText: "LitLens LangGraph Copilot • Ready",
-          answerHtml: `
-            I am <strong>LitLens</strong>, your citation-grounded Research Paper Copilot running on a 100% Free-Tier Hugging Face + AWS stack. Here is how you can chat with me:
-            <ul>
-              <li><strong>1. Chat with Any Uploaded PDF:</strong> Upload any PDF (research paper, lecture notes, cheat sheet) and ask specific questions or request summaries—every claim cites the exact <code>[paper_id#cN]</code> chunk and page number.</li>
-              <li><strong>2. Search &amp; Query the Research Corpus:</strong> Ask technical questions across our indexed papers (e.g., <em>"How does hybrid RRF improve recall?"</em> or <em>"What is GBNF grammar planning?"</em>).</li>
-              <li><strong>3. Generate Literature Review Matrices:</strong> Type <em>"Compare all indexed papers in a Literature Review Matrix"</em> or click <strong>Deep Review Matrix</strong> to run Map-Reduce comparison tables.</li>
-              <li><strong>4. Format Citations (BibTeX / APA):</strong> Type <em>"Format BibTeX and APA citations"</em> to export references for your library.</li>
-            </ul>
-            ${upText}
-          `,
-          chunks: CORPUS.slice(0, 3).map(c => ({ ...c, score: 0.95 }))
+      // 1. Literature Review Matrix
+      if (/literature review|comparison matrix|compare all/i.test(qLower)) {
+        const byPaper = new Map();
+        CORPUS.forEach(c => { if (!byPaper.has(c.arxiv_id)) byPaper.set(c.arxiv_id, c); });
+        let rows = "";
+        byPaper.forEach((c, pid) => {
+          const sents = c.text.split(/(?<=[.!?])\s+/);
+          rows += `
+            <tr>
+              <td><strong>${c.title}</strong><br/><span style="color:#888;font-size:0.75rem;">${pid}</span></td>
+              <td>${(sents[0] || c.text).slice(0, 140)}</td>
+              <td>${(sents[1] || c.text).slice(0, 140)}</td>
+              <td>${(sents[2] || sents[sents.length - 1] || c.text).slice(0, 140)}</td>
+              <td><span class="cite-tag">[${c.chunk_id}]</span></td>
+            </tr>
+          `;
         });
-        renderChatTurns();
+        appendMessage("bot", `
+          <strong>📑 Literature Review Comparison Matrix (${byPaper.size} Papers)</strong>
+          <table class="dark-table">
+            <thead>
+              <tr><th>Paper</th><th>Problem / Topic</th><th>Methodology</th><th>Key Findings</th><th>Citation</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `);
         return;
       }
 
-      // 4. Check for BibTeX / APA Citation Formatting command
-      if (/bibtex|apa|format citation|references list/i.test(qLower)) {
-        const seen = new Map();
-        CORPUS.forEach(c => { if (!seen.has(c.arxiv_id)) seen.set(c.arxiv_id, c); });
-        let apaList = [];
-        let bibList = [];
-        seen.forEach((c, pid) => {
-          apaList.push(`<li>${c.authors || "Author"} (2024). <em>${c.title}</em>. ID: <code>${pid}</code>.</li>`);
-          bibList.push(`@article{litlens_${pid.replace(/[^a-zA-Z0-9]/g, "_")},\n  title={${c.title}},\n  author={${c.authors || "Uploaded PDF"}},\n  year={2024}\n}`);
-        });
-        chatTurns.unshift({
-          user: q,
-          status: "green",
-          planText: "planner → tool:format_citations → synthesizer",
-          badgeText: `Formatted ${seen.size} Citations (APA + BibTeX)`,
-          answerHtml: `
-            <strong>APA References:</strong><ul>${apaList.join("")}</ul>
-            <strong>BibTeX Export:</strong>
-            <pre style="background:#f8fafc;border:1px solid var(--border);padding:10px;border-radius:8px;font-size:0.78rem;overflow-x:auto;">${bibList.join("\n\n")}</pre>
-          `,
-          chunks: []
-        });
-        renderChatTurns();
+      // 2. 30-Question Evaluation Benchmark Table
+      if (/30-question|benchmark|evaluation grid/i.test(qLower)) {
+        appendMessage("bot", `
+          <strong>📊 30-Question Golden Evaluation Benchmark (Chunk Sizes × Model Sizes)</strong>
+          <table class="dark-table">
+            <thead>
+              <tr><th>Model</th><th>Chunk</th><th>Hit@5</th><th>MRR</th><th>Citation Prec.</th><th>Faithfulness</th><th>Abstention</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Qwen2.5-1.5B (Q4_K_M)</td><td>256</td><td>90.0%</td><td>0.900</td><td>90.0%</td><td>87.8%</td><td>100%</td></tr>
+              <tr><td>Qwen2.5-1.5B (Q4_K_M)</td><td>512</td><td>90.0%</td><td>0.900</td><td>90.0%</td><td>87.8%</td><td>100%</td></tr>
+              <tr><td>Qwen2.5-3B (Q4_K_M)</td><td>512</td><td>90.0%</td><td>0.900</td><td>90.0%</td><td>87.8%</td><td>100%</td></tr>
+            </tbody>
+          </table>
+        `);
         return;
       }
 
-      // 5. Retrieve Chunks (Scoped to a specific paper or across ALL library papers)
-      const scope = document.getElementById("paper-scope-select").value;
-      const pool = scope === "ALL" ? CORPUS : CORPUS.filter(c => c.arxiv_id === scope);
+      // 3. General Conversational / Help
+      if (/^(hi|hello|hey|what can you do|help|who are you)/i.test(qLower)) {
+        appendMessage("bot", `
+          I'm <strong>LitLens</strong>, your Research Paper Copilot. You can:
+          <ul>
+            <li>Click <strong>+</strong> inside the chat bar to upload any <strong>PDF</strong> and chat with it using verifiable <code>[paper_id#cN]</code> citations.</li>
+            <li>Ask technical questions about our indexed arXiv papers (e.g., <em>"How does hybrid RRF improve recall?"</em> or <em>"What is GBNF grammar planning?"</em>).</li>
+            <li>Ask me to <em>"Compare all indexed papers in a Literature Review Matrix"</em> or <em>"Format BibTeX and APA citations"</em>.</li>
+          </ul>
+        `);
+        return;
+      }
+
+      // 4. BibTeX / APA Citations
+      if (/bibtex|apa|format citation/i.test(qLower)) {
+        const byPaper = new Map();
+        CORPUS.forEach(c => { if (!byPaper.has(c.arxiv_id)) byPaper.set(c.arxiv_id, c); });
+        let apa = [];
+        byPaper.forEach((c, pid) => {
+          apa.push(`<li>${c.authors || "Author"} (2024). <em>${c.title}</em>. [<code>${pid}</code>]</li>`);
+        });
+        appendMessage("bot", `<strong>📚 Formatted APA References (${byPaper.size} papers):</strong><ul>${apa.join("")}</ul>`);
+        return;
+      }
+
+      // 5. Grounded Retrieval & Synthesis
+      const pool = activeScope === "ALL" ? CORPUS : CORPUS.filter(c => c.arxiv_id === activeScope);
       const qTokens = tokenize(q);
-      const isSummaryOrBroadQuery = /summarize|summary|overview|main|problem|methodology|findings|key|concepts|definitions|what is this|explain|cheat sheet|lecture|automata|dfa|nfa|regex|regular expression|strings|sets/i.test(q);
+      const isBroad = /summarize|summary|overview|main|key|what is this|explain|points|takeaways/i.test(qLower);
 
-      // Score chunks using query keywords (excluding generic command words and title words so real content matches!)
+      if (activeScope !== "ALL" && isBroad && pool.length > 1) {
+        appendMessage("bot", buildDocumentSummaryHtml(pool));
+        return;
+      }
+
       const scored = pool.map((c, idx) => {
         const bodyTokens = new Set(tokenize(c.text));
         const titleTokens = new Set(tokenize(c.title));
         const bodyHits = qTokens.filter(t => bodyTokens.has(t)).length;
         const titleHits = qTokens.filter(t => titleTokens.has(t)).length;
-
-        // Denominator capped at 4 so long queries with full paper titles are never penalized!
         const denom = Math.min(Math.max(qTokens.length, 1), 4);
-        let score = ((bodyHits * 1.0 + titleHits * 0.45) / denom);
+        let score = (bodyHits * 1.0 + titleHits * 0.45) / denom;
 
-        // When user has scoped to a specific uploaded PDF, ensure smooth retrieval across its pages
-        if (scope !== "ALL") {
+        if (activeScope !== "ALL") {
           if (bodyHits > 0) {
-            score = Math.max(score, 0.68 + Math.min(0.28, bodyHits * 0.08));
-          } else if (isSummaryOrBroadQuery || qTokens.length === 0) {
-            score = Math.max(score, Number((0.88 - idx * 0.02).toFixed(3)));
+            score = Math.max(score, 0.72 + Math.min(0.24, bodyHits * 0.08));
           } else {
-            // Substring fallback for technical notation (e.g. DFA, NFA, epsilon, q0)
             const rawLower = c.text.toLowerCase();
-            const substrHits = q.toLowerCase().split(/\s+/).filter(w => w.length >= 2 && rawLower.includes(w)).length;
-            if (substrHits > 0) score = Math.max(score, 0.62);
+            const subHits = qLower.split(/\s+/).filter(w => w.length >= 2 && rawLower.includes(w)).length;
+            if (subHits > 0) score = Math.max(score, 0.65);
+            else if (qTokens.length === 0) score = Math.max(score, 0.85 - idx * 0.02);
           }
         }
         return { ...c, score: Number(Math.min(0.98, Math.max(0.05, score)).toFixed(3)) };
@@ -1181,226 +958,46 @@
       const top = scored[0];
       const threshold = 0.32;
 
-      // If scoped to an uploaded PDF and asking for a summary/overview, provide rich multi-section synthesis
-      if (scope !== "ALL" && isSummaryOrBroadQuery && pool.length > 1) {
-        const repChunks = [scored[0], pool[Math.min(1, pool.length - 1)], pool[Math.floor(pool.length / 2)]].filter(Boolean);
-        const uniqueRep = [...new Map(repChunks.map(item => [item.chunk_id, item])).values()];
-        chatTurns.unshift({
-          user: q,
-          status: "green",
-          planText: `planner → tool:retrieve_chunks(scope="${scope}") → synthesize_and_verify`,
-          badgeText: `Verified Document Synthesis • ${pool.length} Chunks Indexed`,
-          answerHtml: buildDocumentOverviewHtml(pool),
-          chunks: uniqueRep.map(c => ({ ...c, score: c.score || 0.88 }))
-        });
-        renderChatTurns();
-        return;
-      }
-
       if (!top || top.score < threshold) {
-        chatTurns.unshift({
-          user: q,
-          status: "amber",
-          planText: "planner → tool:retrieve_chunks → confidence_gate (ABSTAIN)",
-          badgeText: `Calibrated Abstention Gate • Confidence ${top ? top.score : 0} < ${threshold}`,
-          answerHtml: `I abstained from answering because retrieval confidence (<code>${top ? top.score : 0}</code>) is below the safety threshold (<code>${threshold}</code>). Try selecting your uploaded PDF in the <strong>Scope</strong> dropdown or uploading a paper covering this topic.`,
-          chunks: scored.slice(0, 2)
-        });
-      } else {
-        const topKCount = currentMode === "high_quality" ? 3 : 2;
-        const confidentChunks = scored.filter(c => c.score >= threshold).slice(0, topKCount);
-        const parts = confidentChunks.map(c => {
-          const sents = c.text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 12);
-          let bestSent = sents[0] || c.text.slice(0, 260);
-          let bestOv = -1;
-          sents.forEach(s => {
-            const sSet = new Set(tokenize(s));
-            const ov = qTokens.filter(t => sSet.has(t)).length;
-            if (ov > bestOv) { bestOv = ov; bestSent = s; }
-          });
-          // Include a second sentence if the first one is very short (common in slide/cheat-sheet PDFs)
-          if (bestSent.length < 110 && sents.length > 1) {
-            bestSent = sents.slice(0, 2).join(" ");
-          }
-          return `${bestSent.replace(/\.$/, "")} <span class="cite-badge">[${c.chunk_id}]</span>.`;
-        });
-
-        chatTurns.unshift({
-          user: q,
-          status: "green",
-          planText: `planner → tool:retrieve_chunks → synthesize_and_verify`,
-          badgeText: `Verified Grounded • Confidence ${top.score}`,
-          answerHtml: parts.join("<br/><br/>"),
-          chunks: scored.slice(0, 3)
-        });
-      }
-
-      renderChatTurns();
-    }
-
-    function renderChatTurns() {
-      const container = document.getElementById("results-area");
-      if (!chatTurns.length) {
-        renderDeepLiteratureReviewMatrix();
+        appendMessage("bot", `
+          🟡 <strong>Low Retrieval Confidence (${top ? top.score : 0} &lt; ${threshold}):</strong>
+          I abstained from answering because none of the currently selected papers contain grounded evidence for this query. Click <strong>+</strong> to upload a relevant PDF or switch the document filter at the top.
+          ${buildEvidenceDrawerHtml(scored.slice(0, 2))}
+        `);
         return;
       }
 
-      const turnsHtml = chatTurns.map(turn => {
-        const pillClass = turn.status === "green" ? "status-pill-green" : "status-pill-amber";
-        const chunksHtml = (turn.chunks && turn.chunks.length)
-          ? `<div class="chunk-evidence-grid">` + turn.chunks.map(c => `
-              <div class="chunk-mini-card">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                  <span class="cite-badge">[${c.chunk_id}]</span>
-                  <span style="font-size:0.73rem;color:var(--text-muted);">Score: ${c.score} • p.${c.page}</span>
-                </div>
-                <div style="font-weight:600;color:var(--text);margin-bottom:3px;">${c.title.slice(0, 50)} (${c.section})</div>
-                <div>${c.text.slice(0, 210)}${c.text.length > 210 ? "..." : ""}</div>
-              </div>
-            `).join("") + `</div>`
-          : "";
-
-        return `
-          <div class="chat-thread-card">
-            <div class="chat-question-bar">
-              <span>💬 ${turn.user.replace(/</g, "&lt;")}</span>
-              <span style="font-size:0.74rem;font-weight:500;color:var(--text-muted);">${turn.planText || "LangGraph Plan-then-Execute"}</span>
-            </div>
-            <div class="chat-answer-body">
-              <div style="margin-bottom:10px;">
-                <span class="${pillClass}">● ${turn.badgeText}</span>
-              </div>
-              <div>${turn.answerHtml}</div>
-              ${chunksHtml}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      container.innerHTML = turnsHtml;
-    }
-
-    function renderDeepLiteratureReviewMatrix(customQuery) {
-      const container = document.getElementById("results-area");
-      const byPaper = new Map();
-      CORPUS.forEach(c => {
-        if (!byPaper.has(c.arxiv_id)) byPaper.set(c.arxiv_id, c);
+      const k = thinkMode ? 3 : 2;
+      const picked = scored.filter(c => c.score >= threshold).slice(0, k);
+      const paragraphs = picked.map(c => {
+        const sents = c.text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 12);
+        let best = sents[0] || c.text.slice(0, 260);
+        let bestOv = -1;
+        sents.forEach(s => {
+          const sSet = new Set(tokenize(s));
+          const ov = qTokens.filter(t => sSet.has(t)).length;
+          if (ov > bestOv) { bestOv = ov; best = s; }
+        });
+        if (best.length < 120 && sents.length > 1) best = sents.slice(0, 2).join(" ");
+        return `${best.replace(/\.$/, "")} <span class="cite-tag">[${c.chunk_id}]</span>.`;
       });
 
-      let rowsHtml = "";
-      byPaper.forEach((c, pid) => {
-        const sents = c.text.split(/(?<=[.!?])\s+/);
-        const prob = sents[0] || c.text.slice(0, 130);
-        const meth = sents[1] || c.text.slice(0, 140);
-        const res = sents[2] || sents[sents.length - 1] || c.text.slice(0, 140);
-        rowsHtml += `
-          <tr>
-            <td>
-              <div style="font-weight:600;color:var(--text);">${c.title}</div>
-              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">${c.authors || "Uploaded PDF"} • <code>${pid}</code></div>
-            </td>
-            <td>${prob.slice(0, 150)}</td>
-            <td>${meth.slice(0, 150)}</td>
-            <td>${res.slice(0, 160)}</td>
-            <td><span class="cite-badge">[${c.chunk_id}]</span></td>
-          </tr>
-        `;
-      });
-
-      container.innerHTML = `
-        <div class="white-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-            <div>
-              <h3 style="margin:0 0 4px 0;font-size:1.05rem;">Literature Review Comparison Matrix (${byPaper.size} Indexed Documents)</h3>
-              <p style="margin:0;font-size:0.82rem;color:var(--text-muted);">
-                ${customQuery ? `Query: "${customQuery.replace(/</g, "&lt;")}" • ` : ""}Map-Reduce per-document extraction with verified chunk citations
-              </p>
-            </div>
-            <span class="status-pill-green">● 100% Citation Verified</span>
-          </div>
-          <table class="lit-table">
-            <thead>
-              <tr>
-                <th style="width:24%;">Document / Paper</th>
-                <th style="width:24%;">Problem / Core Topic</th>
-                <th style="width:24%;">Methodology / Key Concepts</th>
-                <th style="width:20%;">Findings / Takeaways</th>
-                <th style="width:8%;">Citation</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-        </div>
-      `;
+      appendMessage("bot", `
+        <div>${paragraphs.join("<br/><br/>")}</div>
+        ${buildEvidenceDrawerHtml(scored.slice(0, 3))}
+      `);
     }
 
-    function renderEvalBenchmarkCard() {
-      document.getElementById("results-area").innerHTML = `
-        <div class="white-card">
-          <h3 style="margin:0 0 6px 0;">30-Question Golden Dataset Evaluation Grid (Chunk Sizes × Model Sizes)</h3>
-          <p style="margin:0 0 12px 0;font-size:0.84rem;color:var(--text-muted);">
-            Reproducible via <code>python -m eval.benchmark_grid</code> across 26 technical arXiv questions + 4 adversarial out-of-domain abstention probes.
-          </p>
-          <table class="lit-table">
-            <thead>
-              <tr>
-                <th>Model Size</th>
-                <th>Chunk Size</th>
-                <th>Retrieval Hit@5</th>
-                <th>MRR</th>
-                <th>Citation Precision</th>
-                <th>Citation Recall</th>
-                <th>Faithfulness</th>
-                <th>Abstention Acc.</th>
-                <th>Avg Latency</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>Qwen2.5-1.5B-Instruct (Q4_K_M)</td><td>256</td><td>90.00%</td><td>0.900</td><td>90.00%</td><td>90.00%</td><td>87.75%</td><td>100.00%</td><td>5.3 ms</td></tr>
-              <tr><td>Qwen2.5-1.5B-Instruct (Q4_K_M)</td><td>512</td><td>90.00%</td><td>0.900</td><td>90.00%</td><td>90.00%</td><td>87.75%</td><td>100.00%</td><td>5.2 ms</td></tr>
-              <tr><td>Qwen2.5-1.5B-Instruct (Q4_K_M)</td><td>1024</td><td>90.00%</td><td>0.900</td><td>90.00%</td><td>90.00%</td><td>87.75%</td><td>100.00%</td><td>5.4 ms</td></tr>
-              <tr><td>Qwen2.5-3B-Instruct (Q4_K_M)</td><td>256</td><td>90.00%</td><td>0.900</td><td>90.00%</td><td>90.00%</td><td>87.75%</td><td>100.00%</td><td>5.3 ms</td></tr>
-              <tr><td>Qwen2.5-3B-Instruct (Q4_K_M)</td><td>512</td><td>90.00%</td><td>0.900</td><td>90.00%</td><td>90.00%</td><td>87.75%</td><td>100.00%</td><td>4.7 ms</td></tr>
-              <tr><td>Qwen2.5-3B-Instruct (Q4_K_M)</td><td>1024</td><td>90.00%</td><td>0.900</td><td>90.00%</td><td>90.00%</td><td>87.75%</td><td>100.00%</td><td>5.0 ms</td></tr>
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-
-    function renderAgentArchitectureCard() {
-      document.getElementById("results-area").innerHTML = `
-        <div class="white-card">
-          <h3 style="margin:0 0 8px 0;">LitLens Agent Tools &amp; $0.00 AWS Free-Tier Stack</h3>
-          <div class="chunk-evidence-grid">
-            <div class="chunk-mini-card"><strong>1. arxiv_search</strong><br/>Queries arXiv Atom API via AWS Lambda Function URL (AWS_IAM SigV4 auth, no API Gateway).</div>
-            <div class="chunk-mini-card"><strong>2. fetch_and_parse_pdf</strong><br/>PyMuPDF + PDF.js extraction stripping &lt;2pt / white spans, saving 1 gzipped bundle per paper in S3.</div>
-            <div class="chunk-mini-card"><strong>3. retrieve_chunks</strong><br/>Local BAAI/bge-small-en-v1.5 + FAISS IndexFlatIP + BM25 fused via Reciprocal Rank Fusion (k=60).</div>
-            <div class="chunk-mini-card"><strong>4. build_lit_matrix</strong><br/>Map-Reduce per-paper structured JSON extraction compiled into a verified Markdown table.</div>
-            <div class="chunk-mini-card"><strong>5. format_citations</strong><br/>Deterministic BibTeX and APA citation generator from indexed paper metadata.</div>
-            <div class="chunk-mini-card"><strong>6. save_memory &amp; Weekly Digest</strong><br/>Provisioned 5 RCU / 5 WCU DynamoDB single-table store + EventBridge Monday cron + Amazon SES.</div>
-          </div>
-        </div>
-      `;
-    }
-
-    function handlePdfDrop(e) {
-      e.preventDefault();
-      document.getElementById("pdf-upload-banner").classList.remove("dragover");
-      if (e.dataTransfer && e.dataTransfer.files) {
-        handlePdfFiles(e.dataTransfer.files);
-      }
-    }
-
-    async function handlePdfFiles(fileList) {
+    async function handlePdfUpload(fileList) {
       if (!fileList || !fileList.length) return;
-      setWorkspaceSection("chat_pdf");
 
       for (const file of fileList) {
         if (!file.name.toLowerCase().endsWith(".pdf")) {
-          alert(`Skipped '${file.name}': only .pdf files are supported.`);
+          appendMessage("bot", `⚠️ Skipped <strong>${file.name}</strong>: only <code>.pdf</code> files are supported.`);
           continue;
         }
+
+        appendMessage("user", `📎 Uploaded PDF: ${file.name}`);
 
         try {
           const buf = await file.arrayBuffer();
@@ -1426,10 +1023,10 @@
 
             if (pageNum === 1 && rawPageText.length > 12) {
               const candidate = rawPageText.split(/[.?!]/)[0].trim();
-              if (candidate.length >= 10 && candidate.length <= 115) inferredTitle = candidate;
+              if (candidate.length >= 10 && candidate.length <= 110) inferredTitle = candidate;
             }
 
-            const { cleaned } = sanitizeUntrustedText(rawPageText);
+            const { cleaned } = sanitizeText(rawPageText);
             const words = cleaned.split(" ");
             for (let pos = 0; pos < words.length; pos += 140) {
               const slice = words.slice(pos, pos + 175).join(" ").trim();
@@ -1449,35 +1046,23 @@
             }
           }
 
-          document.getElementById("paper-scope-select").value = paperId;
-          refreshLibraryUI();
-          showActivePdfBanner(paperId, inferredTitle, chunkIdx);
+          activeScope = paperId;
+          updateLibraryAndPills();
 
-          // Automatically generate and display an immediate multi-page cited breakdown of the uploaded PDF!
           const docChunks = CORPUS.filter(c => c.arxiv_id === paperId);
           if (docChunks.length > 0) {
-            const repChunks = [docChunks[0], docChunks[Math.min(1, docChunks.length - 1)], docChunks[Math.floor(docChunks.length / 2)]].filter(Boolean);
-            const uniqueRep = [...new Map(repChunks.map(item => [item.chunk_id, item])).values()];
-            chatTurns.unshift({
-              user: `Uploaded PDF: "${file.name}" (${chunkIdx} chunks across ${pdf.numPages} pages)`,
-              status: "green",
-              planText: `tool:fetch_and_parse_pdf("${paperId}") → auto_summarize_with_citations`,
-              badgeText: `PDF Indexed & Summarized • ${chunkIdx} Chunks Ready for Q&A`,
-              answerHtml: buildDocumentOverviewHtml(docChunks),
-              chunks: uniqueRep.map(c => ({ ...c, score: 0.96 }))
-            });
-            document.getElementById("main-query-input").value = "";
-            document.getElementById("main-query-input").placeholder = `Ask any question about "${inferredTitle.slice(0, 55)}" (or switch Scope to 'All Library + General Agent')...`;
-            renderChatTurns();
+            appendMessage("bot", buildDocumentSummaryHtml(docChunks));
+          } else {
+            appendMessage("bot", `⚠️ Could not extract readable text from <strong>${file.name}</strong> (it may be a scanned image-only PDF).`);
           }
+          document.getElementById("chat-input").focus();
         } catch (err) {
-          alert(`Failed to parse '${file.name}': ${err.message}`);
+          appendMessage("bot", `❌ Failed to parse <strong>${file.name}</strong>: ${err.message}`);
         }
       }
     }
 
-    refreshLibraryUI();
-    renderDeepLiteratureReviewMatrix();
+    updateLibraryAndPills();
   </script>
 </body>
 </html>
