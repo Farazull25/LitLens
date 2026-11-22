@@ -2,26 +2,32 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import gradio as gr
 from eval.benchmark_grid import run_benchmark_grid
 
 from app.agent.tools.build_lit_matrix import run_build_lit_matrix
-from app.agent.tools.fetch_parse_pdf import run_fetch_and_parse_pdf
+from app.agent.tools.fetch_parse_pdf import run_fetch_and_parse_pdf, run_ingest_uploaded_pdf
 from app.agent.tools.format_citations import run_format_citations
 from app.api.routes import get_copilot_agent
 from app.observability.metrics import metrics_registry
 from app.ui.components import format_chunks_inspector_markdown
 
 
-def _handle_chat(message: str, filter_ids_csv: str) -> tuple[str, str]:
+def _handle_chat(
+    message: str,
+    history: list[list[str]],
+    filter_ids_csv: str,
+) -> tuple[str, list[list[str]], str]:
     agent = get_copilot_agent()
     filter_ids = [x.strip() for x in filter_ids_csv.split(",") if x.strip()] if filter_ids_csv else None
     try:
         state = agent.run(query=message, arxiv_ids=filter_ids)
     except ValueError as exc:
-        return f"**Guardrail Rejection**: {exc}", "### Security Alert\nRequest blocked by input validation."
+        err_msg = f"**Guardrail Rejection**: {exc}"
+        return "", [*history, [message, err_msg]], "### Security Alert\nRequest blocked by input validation."
 
     inspector_md = format_chunks_inspector_markdown(
         chunks=state.get("retrieved_chunks", []),
@@ -29,7 +35,37 @@ def _handle_chat(message: str, filter_ids_csv: str) -> tuple[str, str]:
         max_confidence=float(state.get("max_confidence", 0.0)),
         cached_hit=bool(state.get("cached_hit", False)),
     )
-    return state.get("final_answer", ""), inspector_md
+    answer = state.get("final_answer", "")
+    return "", [*history, [message, answer]], inspector_md
+
+
+def _handle_pdf_uploads(file_paths: list[str] | None) -> tuple[str, list[list[Any]]]:
+    agent = get_copilot_agent()
+    if not file_paths:
+        papers = agent.vector_store.list_papers()
+        return "Please select one or more PDF files to upload.", [
+            [p["arxiv_id"], p["title"], p["authors"], p["published"]] for p in papers
+        ]
+
+    messages: list[str] = []
+    for fp in file_paths:
+        path_obj = Path(fp)
+        try:
+            pdf_bytes = path_obj.read_bytes()
+            res = run_ingest_uploaded_pdf(
+                pdf_bytes=pdf_bytes,
+                filename=path_obj.name,
+                vector_store=agent.vector_store,
+            )
+            messages.append(
+                f"- Uploaded & Indexed **{res['title']}** (`{res['arxiv_id']}`): `{res['chunks_total']}` chunks."
+            )
+        except Exception as exc:
+            messages.append(f"- Failed `{path_obj.name}`: {exc}")
+
+    papers = agent.vector_store.list_papers()
+    rows = [[p["arxiv_id"], p["title"], p["authors"], p["published"]] for p in papers]
+    return "\n".join(messages), rows
 
 
 def _handle_ingest(arxiv_id: str) -> tuple[str, list[list[Any]]]:
@@ -92,44 +128,72 @@ def create_gradio_blocks() -> gr.Blocks:
         )
 
         with gr.Tabs():
-            with gr.Tab("1. Citation-Grounded Q&A"):
+            with gr.Tab("1. Copilot Chat & PDF Upload"):
                 with gr.Row():
                     with gr.Column(scale=3):
+                        chatbot = gr.Chatbot(
+                            label="LitLens Citation-Grounded Chat",
+                            height=420,
+                        )
                         q_input = gr.Textbox(
-                            label="Research Question",
-                            placeholder="e.g., By what percentage does hybrid RRF improve top-5 recall on SciFact?",
+                            label="Ask a question about uploaded PDFs or indexed arXiv papers",
+                            placeholder="e.g., What methodology and evaluation metrics are used in the uploaded paper?",
                             lines=2,
                         )
-                        filter_input = gr.Textbox(
-                            label="Optional arXiv ID Filter (comma-separated)",
-                            placeholder="e.g., 2401.10001, 2401.10002",
-                        )
-                        ask_btn = gr.Button("Ask LitLens Copilot", variant="primary")
-                        ans_md = gr.Markdown(label="Verified Copilot Response")
+                        with gr.Row():
+                            filter_input = gr.Textbox(
+                                label="Optional Paper ID Filter (comma-separated)",
+                                placeholder="e.g., 2401.10001, upload-mypaper-a1b2c3",
+                            )
+                            ask_btn = gr.Button("Send Message", variant="primary")
+                            clear_btn = gr.Button("Clear Chat")
                     with gr.Column(scale=2):
-                        inspector_md = gr.Markdown(
-                            value="*Retrieved chunks and `[arxiv_id#cN]` verification badges appear here.*"
+                        pdf_upload = gr.File(
+                            label="Upload Your Research Paper PDFs (Sanitized & Indexed Locally)",
+                            file_count="multiple",
+                            file_types=[".pdf"],
+                            type="filepath",
                         )
-                ask_btn.click(_handle_chat, inputs=[q_input, filter_input], outputs=[ans_md, inspector_md])
+                        upload_btn = gr.Button("Parse, Sanitize & Index Uploaded PDF(s)", variant="secondary")
+                        upload_status = gr.Markdown()
+                        inspector_md = gr.Markdown(
+                            value="*Retrieved chunks and `[paper_id#cN]` verification badges appear here.*"
+                        )
 
-            with gr.Tab("2. Ingest arXiv Papers"):
+            with gr.Tab("2. Ingest by arXiv ID & Corpus Table"):
                 with gr.Row():
                     ingest_id_box = gr.Textbox(
                         label="arXiv Paper ID",
                         placeholder="e.g., 2005.11401 or 2312.10997",
                     )
-                    ingest_btn = gr.Button("Fetch, Sanitize & Index PDF", variant="primary")
+                    ingest_btn = gr.Button("Fetch, Sanitize & Index arXiv PDF", variant="primary")
                 ingest_status = gr.Markdown()
                 papers_table = gr.Dataframe(
-                    headers=["arXiv ID", "Title", "Authors", "Published"],
+                    headers=["Paper / arXiv ID", "Title", "Authors", "Published"],
                     value=initial_papers,
-                    label="Indexed Papers in Local FAISS + S3 Bundle Store",
+                    label="Indexed Papers (Uploaded PDFs + arXiv Corpus)",
                 )
                 ingest_btn.click(
                     _handle_ingest,
                     inputs=[ingest_id_box],
                     outputs=[ingest_status, papers_table],
                 )
+                upload_btn.click(
+                    _handle_pdf_uploads,
+                    inputs=[pdf_upload],
+                    outputs=[upload_status, papers_table],
+                )
+                ask_btn.click(
+                    _handle_chat,
+                    inputs=[q_input, chatbot, filter_input],
+                    outputs=[q_input, chatbot, inspector_md],
+                )
+                q_input.submit(
+                    _handle_chat,
+                    inputs=[q_input, chatbot, filter_input],
+                    outputs=[q_input, chatbot, inspector_md],
+                )
+                clear_btn.click(lambda: ([], ""), inputs=[], outputs=[chatbot, inspector_md])
 
             with gr.Tab("3. Literature Review Matrix"):
                 with gr.Row():

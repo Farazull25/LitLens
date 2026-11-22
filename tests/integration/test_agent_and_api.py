@@ -163,3 +163,40 @@ def test_fastapi_endpoints_and_eval_harness() -> None:
     assert eval_summary["retrieval_hit_rate"] >= 0.85
     assert eval_summary["citation_precision"] >= 0.85
     assert eval_summary["abstention_accuracy"] >= 0.85
+
+
+def test_pdf_upload_and_citation_chat_endpoint() -> None:
+    import fitz
+
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text(
+        (72, 72),
+        "Quantum Sparse Attention Paper\n\nAbstract\nWe introduce Quantum Sparse Attention (QSA) which reduces transformer KV-cache memory by 73.4 percent on LongBench.",
+    )
+    pdf_bytes = doc.tobytes()
+    doc.close()
+
+    client = TestClient(app)
+    upload_resp = client.post(
+        "/api/upload_pdf",
+        files={"file": ("quantum_sparse_attention.pdf", pdf_bytes, "application/pdf")},
+    )
+    assert upload_resp.status_code == 200
+    up_data = upload_resp.json()
+    uploaded_id = up_data["arxiv_id"]
+    assert uploaded_id.startswith("upload-quantum-sparse")
+    assert up_data["chunks_total"] >= 1
+
+    chat_resp = client.post(
+        "/api/chat",
+        json={
+            "query": "By what percent does Quantum Sparse Attention reduce transformer KV-cache memory on LongBench?",
+            "arxiv_ids": [uploaded_id],
+        },
+    )
+    assert chat_resp.status_code == 200
+    chat_data = chat_resp.json()
+    assert chat_data["low_confidence_refusal"] is False
+    assert any(c.startswith(f"{uploaded_id}#c") for c in chat_data["citations"])
+    assert "73.4" in chat_data["answer"]

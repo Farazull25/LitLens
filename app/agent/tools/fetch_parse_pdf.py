@@ -18,7 +18,7 @@ from app.rag.chunker import PaperChunk, chunk_paper
 from app.rag.vector_store import FAISSVectorStore
 from app.storage.s3 import S3Store
 
-ARXIV_ID_VALIDATOR_RE = re.compile(r"^\d{4}\.\d{4,5}(?:v\d+)?$")
+ARXIV_ID_VALIDATOR_RE = re.compile(r"^(?:\d{4}\.\d{4,5}(?:v\d+)?|upload-[a-zA-Z0-9_-]{3,40})$")
 
 
 class FetchParsePdfInput(BaseModel):
@@ -98,6 +98,70 @@ def _fetch_arxiv_meta_and_pdf(arxiv_id: str) -> tuple[ArxivPaperMeta, bytes]:
         pdf_resp = client.get(meta.pdf_url)
         pdf_resp.raise_for_status()
         return meta, pdf_resp.content
+
+
+def run_ingest_uploaded_pdf(
+    pdf_bytes: bytes,
+    filename: str,
+    vector_store: FAISSVectorStore,
+    title: str | None = None,
+    authors: list[str] | None = None,
+    s3_store: S3Store | None = None,
+) -> dict[str, Any]:
+    """Parse an uploaded PDF file, sanitize against prompt injection, chunk, and index in FAISS + S3."""
+    import hashlib
+
+    raw_text, page_map = extract_safe_text_from_pdf_bytes(pdf_bytes)
+    if not raw_text.strip():
+        raise ValueError(f"Uploaded PDF '{filename}' contains no extractable text.")
+
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", filename.rsplit(".", 1)[0]).strip("-").lower()[:20] or "paper"
+    short_hash = hashlib.sha256(pdf_bytes).hexdigest()[:6]
+    paper_id = f"upload-{slug}-{short_hash}"
+
+    first_lines = [ln.strip() for ln in raw_text.splitlines() if len(ln.strip()) > 6]
+    inferred_title = title or (first_lines[0][:120] if first_lines else filename)
+    paper_authors = authors or ["Uploaded PDF Author"]
+    published = "2025-01-01"
+
+    settings = get_settings()
+    s3 = s3_store or vector_store.s3_store
+    chunks = chunk_paper(
+        arxiv_id=paper_id,
+        title=inferred_title,
+        authors=paper_authors,
+        published=published,
+        text=raw_text,
+        chunk_size_tokens=settings.chunk_size_tokens,
+        chunk_overlap_tokens=settings.chunk_overlap_tokens,
+        page_map=page_map,
+    )
+    bundle = {
+        "arxiv_id": paper_id,
+        "title": inferred_title,
+        "authors": paper_authors,
+        "published": published,
+        "chunks": [c.to_dict() for c in chunks],
+    }
+    s3_key = s3.save_paper_bundle(paper_id, bundle)
+    added = vector_store.add_chunks(chunks, sync_s3=settings.aws_enabled)
+
+    get_logger().info(
+        "uploaded_pdf_ingested",
+        paper_id=paper_id,
+        filename=filename,
+        chunks=len(chunks),
+    )
+    return {
+        "arxiv_id": paper_id,
+        "title": inferred_title,
+        "authors": paper_authors,
+        "published": published,
+        "chunks_total": len(chunks),
+        "chunks_newly_indexed": added,
+        "s3_key": s3_key,
+        "source": "uploaded_pdf",
+    }
 
 
 def run_fetch_and_parse_pdf(

@@ -7,12 +7,12 @@ from typing import Any
 
 from eval.benchmark_grid import run_benchmark_grid
 from eval.runner import load_golden_dataset
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from app.agent.graph import LitLensCopilotAgent
 from app.agent.tools.build_lit_matrix import run_build_lit_matrix
-from app.agent.tools.fetch_parse_pdf import run_fetch_and_parse_pdf
+from app.agent.tools.fetch_parse_pdf import run_fetch_and_parse_pdf, run_ingest_uploaded_pdf
 from app.observability.metrics import metrics_registry
 
 router = APIRouter(prefix="/api", tags=["LitLens Copilot API"])
@@ -121,6 +121,33 @@ def ingest_endpoint(req: IngestRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Failed to ingest arXiv paper: {exc}") from exc
+
+
+@router.post("/upload_pdf")
+async def upload_pdf_endpoint(
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+) -> dict[str, Any]:
+    agent = get_copilot_agent()
+    filename = file.filename or "uploaded_paper.pdf"
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only .pdf files are supported.")
+    pdf_bytes = await file.read()
+    if len(pdf_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded PDF file is empty.")
+    if len(pdf_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="PDF file exceeds 25 MB free-tier upload limit.")
+    try:
+        return run_ingest_uploaded_pdf(
+            pdf_bytes=pdf_bytes,
+            filename=filename,
+            vector_store=agent.vector_store,
+            title=title,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to parse uploaded PDF: {exc}") from exc
 
 
 @router.post("/matrix")

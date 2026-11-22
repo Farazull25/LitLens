@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from app.config import get_settings
 from app.guardrails.injection import sanitize_untrusted_text
 
-# Matches citations in the canonical format [arxiv_id#cN], e.g. [2312.10997#c0] or [2005.11401v4#c12]
-CITATION_TAG_REGEX = re.compile(r"\[([0-9]{4}\.[0-9]{4,5}(?:v\d+)?#c\d+)\]")
+# Matches citations in the canonical format [arxiv_id#cN], e.g. [2312.10997#c0] or [upload-paper#c2]
+CITATION_TAG_REGEX = re.compile(r"\[((?:[0-9]{4}\.[0-9]{4,5}(?:v\d+)?|upload-[a-zA-Z0-9_-]{3,40})#c\d+)\]")
 
 # Matches non-arXiv external markdown links to prevent phishing/exfiltration from poisoned PDFs
 UNSAFE_MARKDOWN_LINK_REGEX = re.compile(
