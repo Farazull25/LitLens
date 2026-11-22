@@ -1,0 +1,10 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "litlens-free-tier-stack"
+resolve_s3 = true
+s3_prefix = "litlens-sam"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "EnvironmentName=\"prod\""

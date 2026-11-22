@@ -1,0 +1,258 @@
+{
+  "seed_papers": [
+    {
+      "arxiv_id": "2401.10001",
+      "title": "Hybrid Retrieval Architecture with Reciprocal Rank Fusion",
+      "authors": ["A. Chen", "M. Patel"],
+      "published": "2024-01-15",
+      "text": "Abstract\nWe evaluate a hybrid retrieval system that merges dense vector inner-product search with sparse BM25 lexical scoring using Reciprocal Rank Fusion (RRF) with constant k=60.\n\nMethodology\nEach document is partitioned into section-aware segments using a sliding window overlap of 64 tokens. Embeddings are computed with a 384-dimensional local encoder.\n\nResults\nOn the SciFact and HotpotQA benchmarks, hybrid RRF improves top-5 recall by 14.2 percent compared to dense-only search while adding less than 8 milliseconds of CPU overhead.\n\nLimitations\nExtremely long mathematical tables with sparse prose can still degrade tokenization accuracy."
+    },
+    {
+      "arxiv_id": "2401.10002",
+      "title": "Grammar-Constrained Planning for Small Quantized Language Models",
+      "authors": ["S. Rossi", "K. Takahashi"],
+      "published": "2024-02-10",
+      "text": "Abstract\nSmall language models between 1.5B and 3B parameters often fail during unconstrained multi-turn tool calling. We introduce a single-shot Plan-then-Execute architecture enforced via GBNF context-free grammars.\n\nMethodology\nThe planner generates an execution plan capped at 4 deterministic tool steps validated by Pydantic schemas before any external tool runs. Model weights are quantized to 4-bit Q4_K_M GGUF format.\n\nResults\nAcross 500 tool-use tasks on a 2-vCPU processor, GBNF grammar enforcement increases JSON schema validity from 61.4 percent to 100.0 percent and cuts retry latency by 47 percent.\n\nLimitations\nFixed plans cannot dynamically invent new tool definitions mid-execution."
+    },
+    {
+      "arxiv_id": "2401.10003",
+      "title": "Sandboxed XML Contexts Against Indirect PDF Prompt Injection",
+      "authors": ["L. Gomez", "R. Vance"],
+      "published": "2024-03-04",
+      "text": "Abstract\nAcademic PDFs harvested from open repositories represent an untrusted input vector capable of indirect prompt injection via microscopic or white-colored font spans.\n\nMethodology\nOur parser discards PDF text spans with font size below 2.0 points or hexadecimal color 0xFFFFFF. Remaining chunks are wrapped in untrusted_paper_content XML tags and verified by a regex citation validator.\n\nResults\nIn adversarial red-team evaluations covering 250 poisoned PDFs, span filtering plus XML sandboxing blocked 99.2 percent of instruction-override attacks and eliminated unauthorized external markdown links.\n\nLimitations\nObfuscated payloads embedded inside rasterized figures require OCR inspection."
+    },
+    {
+      "arxiv_id": "2401.10004",
+      "title": "Map-Reduce Literature Matrix Synthesis with Verifiable Citations",
+      "authors": ["H. Lindqvist", "D. Okafor"],
+      "published": "2024-04-19",
+      "text": "Abstract\nConcatenating multiple full-length research papers into a single context window causes severe cross-paper attribution errors in sub-3B parameter models.\n\nMethodology\nWe decompose literature review generation into an independent per-paper Map phase extracting problem, methodology, benchmarks, and primary_chunk_id, followed by a deterministic Python Reduce phase that compiles the Markdown table.\n\nResults\nEvaluated on 120 multi-paper synthesis tasks, Map-Reduce lowers cross-paper citation swaps from 28.5 percent down to 1.1 percent while fitting comfortably inside a 4096-token context window.\n\nLimitations\nPer-paper sequential mapping scales linearly with the number of compared papers."
+    },
+    {
+      "arxiv_id": "2401.10005",
+      "title": "Cost-Zero Serverless Persistence for Ephemeral AI Workloads",
+      "authors": ["E. Novak", "T. Silva"],
+      "published": "2024-05-22",
+      "text": "Abstract\nContainerized AI applications hosted on ephemeral CPU instances lose local vector indices upon container sleep or restart. We design a zero-cost persistence layer within strict cloud free-tier quotas.\n\nMethodology\nParsed papers are stored as single gzip-compressed JSON bundles in S3 to stay under the 2000 monthly PUT limit, while session state and 24-hour query caches reside in a single-table DynamoDB store provisioned at 5 RCU and 5 WCU.\n\nResults\nCold-start index hydration from S3 completes in 1.8 seconds for 10000 chunks, and DynamoDB query caching reduces duplicate CPU inference load by 63 percent.\n\nLimitations\nProvisioned capacity of 5 WCU requires batching during large bulk backfills."
+    },
+    {
+      "arxiv_id": "2401.10006",
+      "title": "Calibrated Abstention Gates for Citation-Grounded Question Answering",
+      "authors": ["N. Al-Mansoor", "J. Park"],
+      "published": "2024-06-11",
+      "text": "Abstract\nQuestion answering assistants must abstain when retrieved evidence does not support a verifiable answer rather than speculating from parametric memory.\n\nMethodology\nWe compute a calibrated hybrid confidence score combining 55 percent dense cosine similarity, 35 percent normalized BM25 score, and 10 percent RRF rank agreement, enforcing a refusal threshold of 0.32.\n\nResults\nOn out-of-domain and unanswerable probes, the 0.32 confidence gate achieves a 96.8 percent true abstention rate while maintaining 94.5 percent answer coverage on in-domain questions.\n\nLimitations\nHighly abbreviated acronym queries may require query expansion to pass the lexical component."
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "question": "What RRF constant k is used when merging dense vector search with sparse BM25 scoring?",
+      "expected_arxiv_id": "2401.10001",
+      "expected_keywords": ["60", "Reciprocal", "BM25"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q02",
+      "question": "By what percentage does hybrid RRF improve top-5 recall on SciFact and HotpotQA?",
+      "expected_arxiv_id": "2401.10001",
+      "expected_keywords": ["14.2", "SciFact", "HotpotQA"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q03",
+      "question": "How much CPU overhead in milliseconds does the hybrid RRF step add?",
+      "expected_arxiv_id": "2401.10001",
+      "expected_keywords": ["8", "milliseconds"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q04",
+      "question": "What sliding window token overlap and embedding dimension are used in the hybrid retrieval system?",
+      "expected_arxiv_id": "2401.10001",
+      "expected_keywords": ["64", "384"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q05",
+      "question": "What limitation is noted for the hybrid retrieval architecture regarding mathematical tables?",
+      "expected_arxiv_id": "2401.10001",
+      "expected_keywords": ["tables", "tokenization"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q06",
+      "question": "How many maximum deterministic tool steps are allowed in the grammar-constrained execution plan?",
+      "expected_arxiv_id": "2401.10002",
+      "expected_keywords": ["4", "Pydantic", "steps"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q07",
+      "question": "What quantization format is used for the 1.5B and 3B small language models?",
+      "expected_arxiv_id": "2401.10002",
+      "expected_keywords": ["Q4_K_M", "GGUF"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q08",
+      "question": "How does GBNF grammar enforcement affect JSON schema validity across 500 tool-use tasks?",
+      "expected_arxiv_id": "2401.10002",
+      "expected_keywords": ["61.4", "100.0"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q09",
+      "question": "By what percentage does GBNF grammar planning cut retry latency on a 2-vCPU processor?",
+      "expected_arxiv_id": "2401.10002",
+      "expected_keywords": ["47", "latency"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q10",
+      "question": "What is the main limitation of fixed plans in the grammar-constrained planner?",
+      "expected_arxiv_id": "2401.10002",
+      "expected_keywords": ["fixed", "tool"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q11",
+      "question": "Which PDF text span font size and hexadecimal color are discarded by the parser to prevent prompt injection?",
+      "expected_arxiv_id": "2401.10003",
+      "expected_keywords": ["2.0", "0xFFFFFF"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q12",
+      "question": "What XML tag name is used to wrap untrusted chunks during synthesis?",
+      "expected_arxiv_id": "2401.10003",
+      "expected_keywords": ["untrusted_paper_content", "XML"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q13",
+      "question": "What percentage of instruction-override attacks were blocked across 250 poisoned PDFs?",
+      "expected_arxiv_id": "2401.10003",
+      "expected_keywords": ["99.2", "250"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q14",
+      "question": "What limitation exists when adversarial payloads are embedded inside rasterized PDF figures?",
+      "expected_arxiv_id": "2401.10003",
+      "expected_keywords": ["rasterized", "OCR"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q15",
+      "question": "Why does concatenating multiple full research papers into one prompt hurt sub-3B models?",
+      "expected_arxiv_id": "2401.10004",
+      "expected_keywords": ["attribution", "context"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q16",
+      "question": "How does the Map-Reduce literature matrix synthesis split the extraction and table compilation work?",
+      "expected_arxiv_id": "2401.10004",
+      "expected_keywords": ["Map", "Reduce", "Markdown"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q17",
+      "question": "How much does Map-Reduce reduce cross-paper citation swaps on the 120 synthesis tasks?",
+      "expected_arxiv_id": "2401.10004",
+      "expected_keywords": ["28.5", "1.1"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q18",
+      "question": "What context window size does the Map-Reduce literature matrix approach fit within?",
+      "expected_arxiv_id": "2401.10004",
+      "expected_keywords": ["4096"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q19",
+      "question": "How are parsed papers stored in S3 to stay beneath the 2000 monthly PUT request limit?",
+      "expected_arxiv_id": "2401.10005",
+      "expected_keywords": ["gzip", "JSON", "2000"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q20",
+      "question": "What provisioned RCU and WCU capacities are configured on the single-table DynamoDB store?",
+      "expected_arxiv_id": "2401.10005",
+      "expected_keywords": ["5", "RCU", "WCU"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q21",
+      "question": "How fast does cold-start index hydration from S3 complete for 10000 chunks?",
+      "expected_arxiv_id": "2401.10005",
+      "expected_keywords": ["1.8", "seconds"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q22",
+      "question": "By what percentage does the 24-hour DynamoDB query cache reduce duplicate CPU inference load?",
+      "expected_arxiv_id": "2401.10005",
+      "expected_keywords": ["63", "cache"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q23",
+      "question": "What weights are used for dense cosine similarity, normalized BM25, and RRF rank agreement in the hybrid confidence score?",
+      "expected_arxiv_id": "2401.10006",
+      "expected_keywords": ["55", "35", "10"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q24",
+      "question": "What numerical refusal threshold is enforced by the calibrated abstention gate?",
+      "expected_arxiv_id": "2401.10006",
+      "expected_keywords": ["0.32"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q25",
+      "question": "What true abstention rate and in-domain answer coverage does the 0.32 confidence gate achieve?",
+      "expected_arxiv_id": "2401.10006",
+      "expected_keywords": ["96.8", "94.5"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q26",
+      "question": "What limitation do highly abbreviated acronym queries face in the calibrated abstention gate?",
+      "expected_arxiv_id": "2401.10006",
+      "expected_keywords": ["acronym", "expansion"],
+      "is_unanswerable": false
+    },
+    {
+      "id": "Q27",
+      "question": "What is the exact melting point of titanium nitride under lunar vacuum conditions?",
+      "expected_arxiv_id": null,
+      "expected_keywords": [],
+      "is_unanswerable": true
+    },
+    {
+      "id": "Q28",
+      "question": "Which surgical sutures were recommended for equine tendon repair in 19th-century veterinary clinics?",
+      "expected_arxiv_id": null,
+      "expected_keywords": [],
+      "is_unanswerable": true
+    },
+    {
+      "id": "Q29",
+      "question": "How many orbital thrusters are installed on the Voyager 9 deep-space probe?",
+      "expected_arxiv_id": null,
+      "expected_keywords": [],
+      "is_unanswerable": true
+    },
+    {
+      "id": "Q30",
+      "question": "What fermentation temperature produces the highest yield in commercial sourdough rye bakeries?",
+      "expected_arxiv_id": null,
+      "expected_keywords": [],
+      "is_unanswerable": true
+    }
+  ]
+}

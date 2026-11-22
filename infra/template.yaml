@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  LitLens Production Research Paper Copilot — Strictly 100% AWS Free-Tier Stack.
+  Uses Provisioned DynamoDB (5 RCU / 5 WCU), S3 compressed bundles (<5 GB),
+  Lambda Function URLs (no API Gateway), EventBridge + SES weekly digest,
+  SSM Standard Parameters, 3 CloudWatch Alarms, and a $0.01 Zero-Spend AWS Budget.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: prod
+  SesSenderEmail:
+    Type: String
+    Default: digest@example.com
+    Description: Verified Amazon SES sender email address
+  AlertRecipientEmail:
+    Type: String
+    Default: researcher@example.com
+    Description: Verified recipient email for AWS Budget alerts and default digest
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 25
+    MemorySize: 256
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        DYNAMODB_TABLE_NAME: !Ref LitLensStoreTable
+        S3_BUCKET_NAME: !Ref LitLensArtifactBucket
+        SES_SENDER_EMAIL: !Ref SesSenderEmail
+
+Resources:
+  # 1. Amazon S3 Bucket (Free Tier: 5 GB, 2,000 PUTs, 20,000 GETs)
+  LitLensArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+
+  # 2. Amazon DynamoDB Single-Table (Always-Free: Provisioned 5 RCU / 5 WCU, well under 25/25 limit)
+  LitLensStoreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: LitLensStore
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # 3. AWS SSM Standard Parameter Store (Always-Free)
+  SsmBucketNameParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /litlens/prod/s3_bucket_name
+      Type: String
+      Tier: Standard
+      Value: !Ref LitLensArtifactBucket
+
+  SsmTableNameParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /litlens/prod/dynamodb_table_name
+      Type: String
+      Tier: Standard
+      Value: !Ref LitLensStoreTable
+
+  # 4. AWS Lambda: arXiv Tool with Lambda Function URL (AWS_IAM auth, NO API Gateway)
+  ArxivToolFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: litlens-arxiv-tool
+      CodeUri: lambdas/arxiv_tool/
+      Handler: handler.lambda_handler
+      Description: Queries arXiv Atom API and caches compressed paper metadata in S3
+      FunctionUrlConfig:
+        AuthType: AWS_IAM
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref LitLensArtifactBucket
+
+  ArxivToolLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ArxivToolFunction}"
+      RetentionInDays: 7
+
+  # 5. AWS Lambda: Weekly Digest triggered by EventBridge Schedule + Amazon SES
+  WeeklyDigestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: litlens-weekly-digest
+      CodeUri: lambdas/weekly_digest/
+      Handler: handler.lambda_handler
+      Description: Queries DynamoDB topic subscriptions, fetches new arXiv papers, and emails digest via SES
+      Events:
+        WeeklyMondaySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 8 ? * MON *)
+            Description: Trigger weekly arXiv digest every Monday at 08:00 UTC
+            Enabled: true
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref LitLensStoreTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
+
+  WeeklyDigestLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${WeeklyDigestFunction}"
+      RetentionInDays: 7
+
+  # 6. CloudWatch Alarms (Always-Free: up to 10 standard alarms)
+  LambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: LitLens-ArxivTool-Errors
+      AlarmDescription: Alerts if the arXiv tool Lambda records execution errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ArxivToolFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  DynamoDBReadThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: LitLens-DynamoDB-ReadThrottle
+      AlarmDescription: Alerts if DynamoDB 5 RCU provisioned capacity experiences read throttling
+      Namespace: AWS/DynamoDB
+      MetricName: ReadThrottleEvents
+      Dimensions:
+        - Name: TableName
+          Value: !Ref LitLensStoreTable
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  HighRefusalRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: LitLens-HighRefusalCount
+      AlarmDescription: Alerts on unusual spike in low-confidence abstentions
+      Namespace: LitLens/Prod
+      MetricName: RefusalCount
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 50
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  # 7. AWS Budgets Zero-Spend Alert (Always-Free: first 2 budgets are free)
+  ZeroSpendMonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: LitLens-ZeroSpend-FreeTier-Guard
+        BudgetLimit:
+          Amount: 1.0
+          Unit: USD
+        TimeUnit: MONTHLY
+        BudgetType: COST
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 1
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertRecipientEmail
+
+Outputs:
+  ArxivToolFunctionUrl:
+    Description: IAM-authenticated Lambda Function URL for arXiv tool
+    Value: !GetAtt ArxivToolFunctionUrl.FunctionUrl
+  ArtifactBucketName:
+    Description: S3 Bucket for compressed paper bundles and FAISS snapshots
+    Value: !Ref LitLensArtifactBucket
+  DynamoDBTableName:
+    Description: Provisioned Free-Tier DynamoDB single table
+    Value: !Ref LitLensStoreTable

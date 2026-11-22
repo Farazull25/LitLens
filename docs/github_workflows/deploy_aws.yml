@@ -1,0 +1,48 @@
+name: Deploy AWS Free-Tier SAM Stack
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/deploy_aws.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-sam:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Validate and Build SAM Template
+        working-directory: infra
+        run: |
+          sam validate --lint
+          sam build
+
+      - name: Deploy Free-Tier Stack
+        working-directory: infra
+        run: |
+          sam deploy \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              EnvironmentName=prod \
+              SesSenderEmail=${{ secrets.SES_SENDER_EMAIL }} \
+              AlertRecipientEmail=${{ secrets.ALERT_RECIPIENT_EMAIL }}
