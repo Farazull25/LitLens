@@ -113,49 +113,44 @@ def _handle_eval_and_telemetry() -> tuple[str, dict[str, Any]]:
 
 
 def create_gradio_blocks() -> gr.Blocks:
-    """Construct the LitLens multi-tab Gradio Blocks interface."""
+    """Construct the LitLens SciSpace-inspired academic interface."""
     agent = get_copilot_agent()
     initial_papers = [
         [p["arxiv_id"], p["title"], p["authors"], p["published"]]
         for p in agent.vector_store.list_papers()
     ]
 
-    with gr.Blocks(title="LitLens — Research Paper Copilot") as demo:
-        gr.Markdown(
-            "# 🔬 LitLens: Production Research Paper Copilot\n"
-            "**100% Free-Tier Stack**: LangGraph Plan-then-Execute • Local Qwen2.5 GGUF + `bge-small` • "
-            "Hybrid FAISS + BM25 • AWS Free-Tier (S3, DynamoDB Provisioned 5/5, Lambda Function URLs, EventBridge + SES)"
-        )
-
-        with gr.Tabs():
-            with gr.Tab("1. Copilot Chat & PDF Upload"):
-                with gr.Row():
-                    with gr.Column(scale=3):
-                        chatbot = gr.Chatbot(
-                            label="LitLens Citation-Grounded Chat",
-                            height=420,
-                        )
+    with gr.Blocks(title="LitLens — Literature Search & PDF Copilot", theme=gr.themes.Soft()) as demo:
+        with gr.Row():
+            with gr.Column(scale=1, min_width=230):
+                gr.Markdown("### 🟧🟦 **LITLENS**\n*Literature Review & PDF Copilot*")
+                pdf_upload = gr.File(
+                    label="＋ Add PDF to My Library",
+                    file_count="multiple",
+                    file_types=[".pdf"],
+                    type="filepath",
+                )
+                upload_btn = gr.Button("Index Uploaded PDF(s)", variant="primary")
+                upload_status = gr.Markdown()
+                filter_input = gr.Textbox(
+                    label="Library Scope Filter (Paper IDs)",
+                    placeholder="e.g., 2401.10001, upload-paper",
+                )
+                clear_btn = gr.Button("＋ New Chat")
+            with gr.Column(scale=4):
+                gr.Markdown("## Literature Search & Chat with PDF")
+                with gr.Tabs():
+                    with gr.Tab("Literature Search & Chat"):
                         q_input = gr.Textbox(
-                            label="Ask a question about uploaded PDFs or indexed arXiv papers",
-                            placeholder="e.g., What methodology and evaluation metrics are used in the uploaded paper?",
-                            lines=2,
+                            label="Enter your search query or research question",
+                            placeholder="Enter your search query across arXiv & uploaded PDFs...",
+                            lines=3,
                         )
-                        with gr.Row():
-                            filter_input = gr.Textbox(
-                                label="Optional Paper ID Filter (comma-separated)",
-                                placeholder="e.g., 2401.10001, upload-mypaper-a1b2c3",
-                            )
-                            ask_btn = gr.Button("Send Message", variant="primary")
-                            clear_btn = gr.Button("Clear Chat")
-                    with gr.Column(scale=2):
-                        pdf_upload = gr.File(
-                            label="Upload Your Research Paper PDFs (Sanitized & Indexed Locally)",
-                            file_count="multiple",
-                            file_types=[".pdf"],
-                            type="filepath",
+                        ask_btn = gr.Button("Search & Synthesize →", variant="primary")
+                        chatbot = gr.Chatbot(
+                            label="Verified Grounded Responses ([paper_id#cN])",
+                            height=380,
                         )
-                        upload_btn = gr.Button("Parse, Sanitize & Index Uploaded PDF(s)", variant="secondary")
-                        upload_status = gr.Markdown()
                         inspector_md = gr.Markdown(
                             value="*Retrieved chunks and `[paper_id#cN]` verification badges appear here.*"
                         )
