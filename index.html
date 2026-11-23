@@ -843,64 +843,40 @@
 
     async function handleLowConfidenceOrGeneralQuery(q, localScored) {
       const qTokens = tokenize(q);
-      // Try live arXiv Atom API search when local library doesn't cover the topic
+
+      // 1. When scoped to ALL papers, try answering general knowledge / scientific concepts via Wikipedia Open API + arXiv API
       if (qTokens.length >= 1 && activeScope === "ALL") {
+        // 1A. Wikipedia Open REST Summary for general / conceptual questions ("What is quantum computing?", "Explain DFA", etc.)
         try {
-          const searchTerms = qTokens.slice(0, 5).join("+AND+");
-          const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(qTokens.slice(0, 5).join(" "))}&start=0&max_results=3`;
-          const resp = await fetch(url);
-          if (resp.ok) {
-            const xmlText = await resp.text();
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-            const entries = Array.from(xmlDoc.getElementsByTagName("entry"));
-            if (entries.length > 0) {
-              const newlyIndexed = [];
-              entries.forEach(entry => {
-                const rawId = (entry.getElementsByTagName("id")[0]?.textContent || "").trim();
-                const arxivId = rawId.split("/abs/").pop().split("v")[0] || "2401.99999";
-                const title = (entry.getElementsByTagName("title")[0]?.textContent || "arXiv Paper").replace(/\s+/g, " ").trim();
-                const summary = (entry.getElementsByTagName("summary")[0]?.textContent || "").replace(/\s+/g, " ").trim();
-                const published = (entry.getElementsByTagName("published")[0]?.textContent || "2024").slice(0, 4);
-                const authorNodes = Array.from(entry.getElementsByTagName("author"));
-                const authors = authorNodes.map(a => a.getElementsByTagName("name")[0]?.textContent || "").filter(Boolean).slice(0, 2).join(", ") + ` (${published})`;
-
-                const chunkId = `${arxivId}#c0`;
-                const chunkObj = {
-                  chunk_id: chunkId,
-                  arxiv_id: arxivId,
-                  title,
-                  authors,
-                  section: "Abstract (Live arXiv)",
-                  page: 1,
-                  source: "seed",
-                  text: summary,
-                  score: 0.89
-                };
-                if (!CORPUS.some(c => c.chunk_id === chunkId)) {
-                  CORPUS.push(chunkObj);
+          const searchQ = encodeURIComponent(qTokens.join(" "));
+          const wikiSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${searchQ}&utf8=&format=json&origin=*&srlimit=1`;
+          const wsResp = await fetch(wikiSearchUrl);
+          if (wsResp.ok) {
+            const wsData = await wsResp.json();
+            const topHit = wsData?.query?.search?.[0];
+            if (topHit && topHit.title) {
+              const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title)}`;
+              const sumResp = await fetch(summaryUrl);
+              if (sumResp.ok) {
+                const sumData = await sumResp.json();
+                if (sumData && sumData.extract) {
+                  appendMessage("bot", `
+                    <div>
+                      <strong>🧠 General Knowledge Answer — ${sumData.title}</strong>
+                      <span class="cite-tag">[General Knowledge • Not from Local PDF Library]</span><br/><br/>
+                      ${sumData.extract}<br/><br/>
+                      <span style="font-size:0.82rem;color:var(--muted);">
+                        ℹ️ <em>Note: This answer comes from general reference knowledge (<a href="${sumData.content_urls?.desktop?.page || 'https://en.wikipedia.org'}" target="_blank" style="color:#60a5fa;">${sumData.title}</a>) because your currently indexed PDFs had low similarity (<code>${localScored[0] ? localScored[0].score : 0} &lt; 0.32</code>). Click <strong>+</strong> to upload a PDF on this topic for chunk-level citations!</em>
+                      </span>
+                    </div>
+                  `);
+                  return;
                 }
-                newlyIndexed.push(chunkObj);
-              });
-
-              updateLibraryAndPills();
-              const bullets = newlyIndexed.map(c => {
-                const firstTwo = c.text.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
-                return `<li><strong>${c.title}</strong> (${c.authors}): ${firstTwo} <span class="cite-tag">[${c.chunk_id}]</span></li>`;
-              }).join("");
-
-              appendMessage("bot", `
-                <div>
-                  🌐 <strong>Live arXiv Search &amp; Indexing</strong> — I fetched and indexed <strong>${newlyIndexed.length} papers</strong> from arXiv matching your query:
-                  <ul>${bullets}</ul>
-                  ${buildEvidenceDrawerHtml(newlyIndexed)}
-                </div>
-              `);
-              return;
+              }
             }
           }
-        } catch (_err) {
-          // Fall through to helpful assistant response if offline or CORS blocked
+        } catch (_wikiErr) {
+          // Continue to fallback
         }
       }
 
@@ -976,19 +952,19 @@
         return;
       }
 
-      // 3. General Conversational / About App / Architecture / Help
+      // 3. General Conversational / About App or AI Agent / Architecture / Help
       if (
-        /^(hi|hello|hey|yo|good morning|good evening|thanks|thank you)\b/i.test(qLower) ||
-        /(what is this app|what is litlens|about this app|what does this do|what can you do|who are you|how does this work|how to use|capabilities|features|architecture|tech stack|aws|free tier)/i.test(qLower)
+        /^(hi|hello|hey|yo|good morning|good evening|thanks|thank you|help)\b/i.test(qLower) ||
+        /(what is this|all about|what is litlens|about this|what does (this|it) do|what can (you|this|it) do|who are you|how does (this|it) work|how to use|capabilities|features|architecture|tech stack|aws|free tier|ai agent|copilot)/i.test(qLower)
       ) {
         const seenCount = new Set(CORPUS.map(c => c.arxiv_id)).size;
         appendMessage("bot", `
           <strong>🔬 Welcome to LitLens — Production Research Paper Copilot</strong><br/><br/>
-          LitLens is an AI research assistant built on a <strong>100% Free-Tier Hugging Face + AWS stack</strong>. Here is what it does and how you can use it:
+          LitLens is a hybrid AI Research Agent built on a <strong>100% Free-Tier Hugging Face + AWS stack</strong>. It can answer <strong>both research paper / PDF questions (with strict chunk citations) and general knowledge or science questions</strong>:
           <ul>
             <li><strong>1. Upload &amp; Chat with Your Own PDFs:</strong> Click the <strong>+</strong> button inside the chat bar to upload any research paper, textbook, or lecture PDF. LitLens extracts the text locally, strips prompt-injection vectors, chunks it by page, and answers your questions with verifiable <code>[paper_id#cN]</code> citations.</li>
             <li><strong>2. Citation-Grounded arXiv Q&amp;A:</strong> Ask questions across the ${seenCount} indexed papers in your library (e.g., <em>"How does hybrid RRF improve recall on SciFact?"</em> or <em>"What is GBNF grammar planning?"</em>). Every claim is mapped to an exact source chunk.</li>
-            <li><strong>3. Live arXiv Paper Search:</strong> Ask about any research topic (e.g., <em>"Find papers on Diffusion Transformers"</em> or <em>"Tell me about GraphRAG"</em>)—if it isn't in your local library yet, LitLens queries the live <strong>arXiv API</strong>, indexes the new papers on the fly, and answers with citations.</li>
+            <li><strong>3. Live arXiv Paper Search &amp; General Knowledge:</strong> Ask about any research topic or general question (e.g., <em>"What is a Deterministic Finite Automaton?"</em>, <em>"Tell me about Diffusion Transformers"</em>, or <em>"What is machine learning?"</em>)—if it isn't in your local PDF library yet, LitLens queries live open knowledge &amp; arXiv APIs on the fly.</li>
             <li><strong>4. Map-Reduce Literature Review Matrices &amp; Citations:</strong> Ask <em>"Generate a Literature Review Matrix"</em> or <em>"Format BibTeX and APA citations"</em> to compile comparison tables and references.</li>
           </ul>
         `);
