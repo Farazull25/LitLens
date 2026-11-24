@@ -797,7 +797,7 @@
       return safe;
     }
 
-    async function callGenerativeLLM(systemPrompt, userPrompt, timeoutMs = 2800) {
+    async function callGenerativeLLM(systemPrompt, userPrompt, timeoutMs = 8000) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -824,22 +824,37 @@
       }
     }
 
+    function cleanGeneralSearchPhrase(raw) {
+      // Strip common question prefixes (including typos like "whho is", "waht is") so Wikipedia finds the exact entity
+      const stripped = raw
+        .replace(/^(?:w+h+o+|w+h+a+t+|w+h+e+r+e+|w+h+e+n+|w+h+y+|h+o+w+|tell\s+me\s+about|explain|define)\s+(?:is|are|was|were|does|do|can|the|a|an)?\s*/i, "")
+        .replace(/[?!.]+$/g, "")
+        .trim();
+      return stripped || raw.replace(/[?!.]+$/g, "").trim();
+    }
+
     async function fetchWikipediaFast(queryStr) {
+      const candidates = [cleanGeneralSearchPhrase(queryStr)];
       const qTokens = tokenize(queryStr);
-      const cleanQuery = qTokens.length ? qTokens.join(" ") : queryStr;
-      const searchQ = encodeURIComponent(cleanQuery);
-      const wikiSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${searchQ}&utf8=&format=json&origin=*&srlimit=1`;
-      const wsResp = await fetch(wikiSearchUrl);
-      if (!wsResp.ok) throw new Error("Wiki search failed");
-      const wsData = await wsResp.json();
-      const topHit = wsData?.query?.search?.[0];
-      if (!topHit || !topHit.title) throw new Error("No wiki hit");
-      const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title)}`;
-      const sumResp = await fetch(summaryUrl);
-      if (!sumResp.ok) throw new Error("Wiki summary failed");
-      const sumData = await sumResp.json();
-      if (!sumData || !sumData.extract) throw new Error("Empty wiki extract");
-      return sumData;
+      if (qTokens.length > 1) {
+        candidates.push(qTokens.slice(-2).join(" "));
+      }
+
+      for (const phrase of candidates) {
+        const searchQ = encodeURIComponent(phrase);
+        const wikiSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${searchQ}&utf8=&format=json&origin=*&srlimit=1`;
+        const wsResp = await fetch(wikiSearchUrl);
+        if (!wsResp.ok) continue;
+        const wsData = await wsResp.json();
+        const topHit = wsData?.query?.search?.[0];
+        if (!topHit || !topHit.title) continue;
+        const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title)}`;
+        const sumResp = await fetch(summaryUrl);
+        if (!sumResp.ok) continue;
+        const sumData = await sumResp.json();
+        if (sumData && sumData.extract) return sumData;
+      }
+      throw new Error("No wiki hit");
     }
 
     function submitFromLanding() {
@@ -927,7 +942,7 @@
           })
           .catch(() => null);
 
-        const llmPromise = callGenerativeLLM(sysPrompt, q, 2600)
+        const llmPromise = callGenerativeLLM(sysPrompt, q, 8000)
           .then(llmText => {
             if (!renderedFast) {
               renderedFast = true;
