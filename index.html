@@ -797,16 +797,18 @@
       return safe;
     }
 
-    async function callGenerativeLLM(systemPrompt, userPrompt, timeoutMs = 8000) {
+    const AWS_GROQ_LAMBDA_URL = "https://5fhvg3vml3thbeswuljsastbvu0asosq.lambda-url.us-east-1.on.aws/";
+
+    async function callGenerativeLLM(systemPrompt, userPrompt, timeoutMs = 9000) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const resp = await fetch("https://text.pollinations.ai/openai", {
+        const resp = await fetch(AWS_GROQ_LAMBDA_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            model: "openai-fast",
+            model: thinkMode ? "qwen/qwen3.8-27b" : "allam-2-7b",
             temperature: 0.2,
             messages: [
               { role: "system", content: systemPrompt },
@@ -814,11 +816,11 @@
             ]
           })
         });
-        if (!resp.ok) throw new Error(`LLM HTTP ${resp.status}`);
+        if (!resp.ok) throw new Error(`Lambda LLM HTTP ${resp.status}`);
         const data = await resp.json();
-        const content = data?.choices?.[0]?.message?.content;
+        const content = data?.answer || data?.choices?.[0]?.message?.content;
         if (!content) throw new Error("Empty LLM response");
-        return content.trim();
+        return { text: content.trim(), model: data?.model || "groq-llm" };
       } finally {
         clearTimeout(timer);
       }
@@ -920,48 +922,37 @@
 
     async function handleLowConfidenceOrGeneralQuery(q, localScored, thinkingEl) {
       if (activeScope === "ALL") {
-        // Race Wikipedia (~200ms) and Generative LLM in parallel so the user gets an answer in <300ms!
-        let renderedFast = false;
         const sysPrompt =
-          "You are LitLens, a fast, concise AI Research Copilot built by Muhammad Faraz Malik (MF180) on a 100% Free-Tier Hugging Face + AWS stack. Answer the user's question clearly and concisely in 3-5 sentences.";
+          "You are LitLens, an intelligent, fast AI Research Copilot and general assistant built by Muhammad Faraz Malik (MF180) on a 100% Free-Tier Hugging Face + AWS stack (AWS Lambda Function URL + Groq LPU + LangGraph + FAISS + S3 + Provisioned DynamoDB). Answer the user's question clearly, naturally, and concisely.";
 
-        const wikiPromise = fetchWikipediaFast(q)
-          .then(sumData => {
-            renderedFast = true;
+        try {
+          const llmRes = await callGenerativeLLM(sysPrompt, q, 9000);
+          thinkingEl.innerHTML = `
+            <div>
+              <div style="margin-bottom:8px;">
+                <span class="cite-tag">[Groq LPU • ${llmRes.model}]</span>
+              </div>
+              <div>${formatLLMOutputToHtml(llmRes.text)}</div>
+            </div>
+          `;
+          return;
+        } catch (_llmErr) {
+          // Fallback to fast Wikipedia Open REST API if offline
+          try {
+            const sumData = await fetchWikipediaFast(q);
             thinkingEl.innerHTML = `
               <div>
                 <div style="margin-bottom:8px;">
-                  <span class="cite-tag">[Instant Knowledge • ${sumData.title}]</span>
+                  <span class="cite-tag">[Open Knowledge • ${sumData.title}]</span>
                 </div>
                 <div>${sumData.extract}</div>
-                <div style="margin-top:10px;font-size:0.78rem;color:var(--muted);">
-                  ⚡ <em>Instant response via Open Knowledge (<a href="${sumData.content_urls?.desktop?.page || 'https://en.wikipedia.org'}" target="_blank" style="color:#60a5fa;">${sumData.title}</a>). Click <strong>+</strong> to upload a PDF anytime for chunk-grounded <code>[paper_id#cN]</code> citations.</em>
-                </div>
               </div>
             `;
-          })
-          .catch(() => null);
-
-        const llmPromise = callGenerativeLLM(sysPrompt, q, 8000)
-          .then(llmText => {
-            if (!renderedFast) {
-              renderedFast = true;
-              thinkingEl.innerHTML = `
-                <div>
-                  <div style="margin-bottom:8px;">
-                    <span class="cite-tag">[Generative AI Assistant • General Knowledge]</span>
-                  </div>
-                  <div>${formatLLMOutputToHtml(llmText)}</div>
-                </div>
-              `;
-            }
-          })
-          .catch(() => null);
-
-        await Promise.race([wikiPromise, llmPromise]);
-        if (renderedFast) return;
-        await Promise.allSettled([wikiPromise, llmPromise]);
-        if (renderedFast) return;
+            return;
+          } catch (_wikiErr) {
+            // Continue to offline fallback
+          }
+        }
       }
 
       // 3. Scoped PDF / Instant Offline Fallback
@@ -1128,26 +1119,25 @@
         ${buildEvidenceDrawerHtml(scored.slice(0, 3))}
       `);
 
-      // Only invoke slow remote LLM refinement if user explicitly toggled "🧠 Think" mode
-      if (thinkMode) {
-        try {
-          const xmlBlocks = picked.map(c =>
-            `<untrusted_paper_content chunk_id="${c.chunk_id}" title="${c.title}" section="${c.section}" page="${c.page}">\n${c.text}\n</untrusted_paper_content>`
-          ).join("\n\n");
-          const ragSysPrompt =
-            "You are LitLens, a rigorous Research Paper Copilot. Answer using ONLY the provided <untrusted_paper_content> blocks. Every factual claim MUST include an inline citation like [" + picked[0].chunk_id + "]. Be concise.";
-          const ragUserPrompt = `${xmlBlocks}\n\nUSER QUESTION: ${q}\nProvide a grounded answer citing [${picked[0].chunk_id}].`;
-          let llmAns = await callGenerativeLLM(ragSysPrompt, ragUserPrompt, 3000);
-          if (!llmAns.includes("#c")) {
-            llmAns = `${llmAns.replace(/\.$/, "")} [${picked[0].chunk_id}].`;
-          }
-          msgEl.innerHTML = `
-            <div>${formatLLMOutputToHtml(llmAns)}</div>
-            ${buildEvidenceDrawerHtml(scored.slice(0, 3))}
-          `;
-        } catch (_ragErr) {
-          // Keep the instant grounded response already on screen
+      // Upgrade with Groq LPU synthesis over the retrieved <untrusted_paper_content> chunks
+      try {
+        const xmlBlocks = picked.map(c =>
+          `<untrusted_paper_content chunk_id="${c.chunk_id}" title="${c.title}" section="${c.section}" page="${c.page}">\n${c.text}\n</untrusted_paper_content>`
+        ).join("\n\n");
+        const ragSysPrompt =
+          "You are LitLens, a rigorous Research Paper Copilot. Answer using ONLY the provided <untrusted_paper_content> blocks. Every factual claim MUST include an inline citation like [" + picked[0].chunk_id + "]. Be concise.";
+        const ragUserPrompt = `${xmlBlocks}\n\nUSER QUESTION: ${q}\nProvide a grounded answer citing [${picked[0].chunk_id}].`;
+        const llmRes = await callGenerativeLLM(ragSysPrompt, ragUserPrompt, 8000);
+        let llmAns = llmRes.text;
+        if (!llmAns.includes("#c")) {
+          llmAns = `${llmAns.replace(/\.$/, "")} [${picked[0].chunk_id}].`;
         }
+        msgEl.innerHTML = `
+          <div>${formatLLMOutputToHtml(llmAns)}</div>
+          ${buildEvidenceDrawerHtml(scored.slice(0, 3))}
+        `;
+      } catch (_ragErr) {
+        // Keep the instant grounded response already on screen
       }
     }
 
