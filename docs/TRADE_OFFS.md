@@ -29,3 +29,5 @@
 
 - **SES Sandbox & Quota Protection**: WeeklyDigestFunction enforces a 50-email/run safety cap within the free tier.
 
+- **Edge Caching TTL**: Static assets use a 60s Cache-Control header for instant rollouts.
+
