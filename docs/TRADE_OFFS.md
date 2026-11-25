@@ -19,3 +19,7 @@
 | **AWS Lambda** | 1M requests + 400,000 GB-s/mo (Always-Free) | API Gateway costs \$1.00–\$3.50/M after 12 months; ECR container images cost \$0.10/GB-mo. | Use `.zip` Lambdas with **Lambda Function URLs** (`AuthType: AWS_IAM` + SigV4 signing). Zero API Gateway, zero ECR. |
 | **Amazon CloudWatch** | 5 GB logs, **10 custom metrics**, 10 alarms (Always-Free) | Adding `session_id` or `user_id` dimensions creates thousands of billable custom metrics (\$0.30/metric). | Hard-allowlist 6 metric names (`QueryLatencyMs`, `RetrievalHitCount`, `RefusalCount`, `CacheHitCount`, `InjectionBlockedCount`, `LLMErrorCount`) with **empty `Dimensions: []`** and 7-day log retention. |
 | **AWS Budgets** | First 2 budgets Always-Free | Surprise spillover charges. | `ZeroSpendMonthlyBudget` configured in `infra/template.yaml` to email immediately at \$0.01 actual spend. |
+
+## 4. AWS CloudFront HTTPS & Lambda Function URL Edge Delivery
+- **CloudFront HTTPS Distribution (E4BC0SGVGTZCE)**: Serves LitLens over AWS TLS 1.3 within the 1 TB Always-Free data transfer tier.
+
