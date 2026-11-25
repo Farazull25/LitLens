@@ -25,3 +25,5 @@
 
 - **Zero-Key Client Protection**: The static HTML client never stores API keys; all LLM calls route through the AWS Lambda Function URL (litlens-groq-chat).
 
+- **Zero-Spend Budget Guard**: AWS Budget alerts fire at $0.01 forecasted/actual spend to protect Free-Tier boundaries.
+
