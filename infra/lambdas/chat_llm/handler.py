@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import re
 import urllib.error
 import urllib.request
@@ -11,6 +12,7 @@ from typing import Any
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 THINK_BLOCK_RE = re.compile(r"<think>.*?</think>\s*", re.S)
+INDEX_HTML_PATH = pathlib.Path(__file__).parent / "index.html"
 
 
 def _strip_think_tags(text: str) -> str:
@@ -22,14 +24,28 @@ def _strip_think_tags(text: str) -> str:
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Handle CORS preflight and chat completion requests for LitLens."""
+    """Handle GET (serve LitLens HTML UI over AWS HTTPS), OPTIONS (CORS), and POST (Groq LPU chat)."""
     method = (
         event.get("requestContext", {}).get("http", {}).get("method")
         or event.get("httpMethod")
         or "POST"
-    )
-    if method.upper() == "OPTIONS":
+    ).upper()
+    if method == "OPTIONS":
         return {"statusCode": 200, "body": ""}
+    if method == "GET":
+        html_body = (
+            INDEX_HTML_PATH.read_text(encoding="utf-8")
+            if INDEX_HTML_PATH.exists()
+            else "<html><body><h1>LitLens AWS HTTPS Endpoint Ready</h1></body></html>"
+        )
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "public, max-age=60",
+            },
+            "body": html_body,
+        }
 
     raw_body = event.get("body") or "{}"
     body = json.loads(raw_body) if isinstance(raw_body, str) else raw_body

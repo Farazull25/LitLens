@@ -11,6 +11,11 @@ short_description: Citation-grounded arXiv Copilot on 100% free HF & AWS tiers
 
 # 🔬 LitLens: Production Research Paper Copilot
 
+- **Live App (Hugging Face Space):** [https://huggingface.co/spaces/MF180/LitLens](https://huggingface.co/spaces/MF180/LitLens)
+- **Live App (AWS CloudFront Free-Tier HTTPS CDN):** [https://d3hktea6lg4yfr.cloudfront.net](https://d3hktea6lg4yfr.cloudfront.net)
+- **Live App & LLM Backend (AWS Lambda Function URL HTTPS):** [https://5fhvg3vml3thbeswuljsastbvu0asosq.lambda-url.us-east-1.on.aws/](https://5fhvg3vml3thbeswuljsastbvu0asosq.lambda-url.us-east-1.on.aws/)
+- **GitHub Repository:** [https://github.com/farazmalik180/LitLens](https://github.com/farazmalik180/LitLens)
+
 **LitLens** is a production-grade Research Paper Copilot agent that ingests arXiv papers, answers research questions with verifiable `[arxiv_id#cN]` chunk citations, compiles Map-Reduce literature review comparison matrices, and emails a weekly digest of new papers on topics you follow.
 
 It is engineered from the ground up to run at **\$0.00/month** strictly within the **Hugging Face Spaces Free Tier (`cpu-basic`: 2 vCPU, 16 GB RAM)** and **AWS Free Tier** (Lambda Function URLs, S3, Provisioned DynamoDB, EventBridge, SES, CloudWatch, SSM Parameter Store, and AWS Budgets).
