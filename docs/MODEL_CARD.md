@@ -27,3 +27,7 @@
 ## 5. Known Limitations
 - **Small Model Reasoning Ceiling**: 1.5B–3B models cannot perform deep multi-hop mathematical proofs across 10+ papers simultaneously; LitLens mitigates this via single-shot grammar-constrained planning and per-paper Map-Reduce decomposition.
 - **Rasterized Figures**: Text embedded exclusively inside rasterized images/plots inside PDFs is not extracted without OCR.
+
+## 6. Cloud LPU Acceleration Tier
+- **AWS Lambda Function URL + Groq LPU (llam-2-7b / qwen/qwen3.8-27b)**: Provides sub-second general assistant and RAG synthesis over HTTPS.
+
