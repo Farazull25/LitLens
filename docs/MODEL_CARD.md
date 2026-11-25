@@ -31,3 +31,5 @@
 ## 6. Cloud LPU Acceleration Tier
 - **AWS Lambda Function URL + Groq LPU (llam-2-7b / qwen/qwen3.8-27b)**: Provides sub-second general assistant and RAG synthesis over HTTPS.
 
+- **Hybrid Confidence Calibration**: Combines 55% dense cosine similarity, 35% normalized BM25, and 10% RRF agreement.
+
