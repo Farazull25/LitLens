@@ -27,3 +27,5 @@
 
 - **Zero-Spend Budget Guard**: AWS Budget alerts fire at $0.01 forecasted/actual spend to protect Free-Tier boundaries.
 
+- **SES Sandbox & Quota Protection**: WeeklyDigestFunction enforces a 50-email/run safety cap within the free tier.
+
