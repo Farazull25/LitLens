@@ -23,3 +23,5 @@
 ## 4. AWS CloudFront HTTPS & Lambda Function URL Edge Delivery
 - **CloudFront HTTPS Distribution (E4BC0SGVGTZCE)**: Serves LitLens over AWS TLS 1.3 within the 1 TB Always-Free data transfer tier.
 
+- **Zero-Key Client Protection**: The static HTML client never stores API keys; all LLM calls route through the AWS Lambda Function URL (litlens-groq-chat).
+
