@@ -35,3 +35,5 @@
 
 - **S3 Snapshot Hydration**: Hydrates 10,000 FAISS chunks in <1.8s on container startup.
 
+- **Zero-Width Character Filtering**: Strips Unicode zero-width joiners (\u200b–\u200d, \ufeff) before tokenization.
+
