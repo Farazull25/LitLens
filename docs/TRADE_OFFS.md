@@ -33,3 +33,5 @@
 
 - **CloudWatch Log Retention**: Locked to 7 days (RetentionInDays: 7) to stay well under the 5 GB Always-Free ingestion cap.
 
+<!-- benchmark verification step 10 -->
+
