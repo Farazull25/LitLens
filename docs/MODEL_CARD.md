@@ -37,3 +37,5 @@
 
 - **Zero-Width Character Filtering**: Strips Unicode zero-width joiners (\u200b–\u200d, \ufeff) before tokenization.
 
+<!-- verified multi-user PR 2 -->
+
